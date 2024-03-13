@@ -1,6 +1,6 @@
 #include <string>
 
-#include "owl-cpu/owl-cpu.hpp"
+#include "owl-cpu/owl-cpu.h"
 
 auto main() -> int
 {
