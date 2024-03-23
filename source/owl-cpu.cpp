@@ -1,14 +1,8 @@
-// #include "owl-cpu/owl-cpu.h"
-
 #include <cstdint>
 #include <format>
 #include <iostream>
 #include <string>
 #include <vector>
-
-// ExportedClass::ExportedClass() : m_name{"owl-cpu"} {}
-
-// auto ExportedClass::name() const -> char const* { return m_name.c_str(); }
 
 struct Owl
 {
@@ -90,7 +84,6 @@ struct Reg
 private:
     uint32_t v;
 };
-static_assert(sizeof(Reg) == sizeof(uint32_t));
 
 struct Immediate
 {
@@ -120,9 +113,10 @@ struct Branch
     // | offs12 | unused | rs2 | rs1 | opc |
     // |     12 |      3 |   5 |   5 |   7 |
     // +--------+--------+-----+-----+-----+
-    // TODO: Check. Note: shift offs12 by 19 not 20 because the normal decoder has already done the multiply by 2
+    // offs12 is given in multiples of two bytes, but as we let it be specified in bytes we have to shift it by 19
+    // positions rather than 20, masking off the bottom bit.
     Branch(Opcode opc, uint32_t rs1, uint32_t rs2, uint32_t offs12)
-        : v{(offs12 << 19) | (rs2 << 12) | (rs1 << 7) | uint32_t(opc)}
+        : v{((offs12 & 0xfffffffe) << 19) | (rs2 << 12) | (rs1 << 7) | uint32_t(opc)}
     {
     }
 
@@ -143,8 +137,9 @@ struct CallT
     // | offs20 | rd | opc |
     // |     20 |  5 |   7 |
     // +--------+----+-----+
-    // TODO: Check. Note: shift offs12 by 11 not 12 because the normal decoder has already done the multiply by 2
-    CallT(Opcode opc, uint32_t rd, uint32_t offs20) : v{(offs20 << 11) | (rd << 7) | uint32_t(opc)} {}
+    // offs20 is given in multiples of two bytes, but as we let it be specified in bytes we have to shift it by 11
+    // positions rather than 12, masking off the bottom bit.
+    CallT(Opcode opc, uint32_t rd, uint32_t offs20) : v{((offs20 & 0xfffffffe) << 11) | (rd << 7) | uint32_t(opc)} {}
 
     operator uint32_t() const { return v; }
 
@@ -238,7 +233,7 @@ auto Run(const std::uint32_t* code)
             auto rs1 = instruction.branch.rs1();
             auto rs2 = instruction.branch.rs2();
             auto sxoffs12 = instruction.branch.sxoffs12();
-            std::cout << std::format("beq {}, {}, {}\n", regnames[rs1], regnames[rs2], sxoffs12);
+            std::cout << std::format("beq {}, {}, {:04x}\n", regnames[rs1], regnames[rs2], pc + sxoffs12);
             if (x[rs1] == x[rs2])
             {
                 nextPc = pc + sxoffs12;
@@ -249,7 +244,7 @@ auto Run(const std::uint32_t* code)
             auto rs1 = instruction.branch.rs1();
             auto rs2 = instruction.branch.rs2();
             auto sxoffs12 = instruction.branch.sxoffs12();
-            std::cout << std::format("bltu {}, {}, {}\n", regnames[rs1], regnames[rs2], sxoffs12);
+            std::cout << std::format("bltu {}, {}, {:04x}\n", regnames[rs1], regnames[rs2], pc + sxoffs12);
             if (x[rs1] < x[rs2])
             {
                 nextPc = pc + sxoffs12;
@@ -258,7 +253,7 @@ auto Run(const std::uint32_t* code)
         }
         case Opcode::Call: {
             auto sxoffs20 = instruction.call.sxoffs20();
-            std::cout << std::format("call {}\n", sxoffs20);
+            std::cout << std::format("call {}\n", pc + sxoffs20);
             x[ra] = pc + 4;
             x[0] = 0;
             // nextPc = pc + sxoffs20;
@@ -267,14 +262,14 @@ auto Run(const std::uint32_t* code)
         }
         case Opcode::J: {
             auto sxoffs20 = instruction.call.sxoffs20();
-            std::cout << std::format("j {}\n", sxoffs20);
+            std::cout << std::format("j {:04x}\n", pc + sxoffs20);
             nextPc = pc + sxoffs20;
             break;
         }
         case Opcode::Li: {
             auto rd = instruction.immediate.rd();
             auto sximm12 = instruction.immediate.sximm12();
-            std::cout << std::format("li {}, {}\n", regnames[rd], sximm12);
+            std::cout << std::format("li {}, {}\n", regnames[rd], pc + sximm12);
             x[rd] = sximm12;
             x[0] = 0;
             break;
@@ -297,7 +292,7 @@ auto Run(const std::uint32_t* code)
         }
         default:
             // Illegal instruction.
-            std::cout << std::format("illegal {}\n", uint32_t(opcode));
+            std::cout << std::format("illegal opcode {}\n", uint32_t(opcode));
             done = true;
         }
     }
@@ -314,56 +309,55 @@ public:
 
     void Li(uint32_t rd, int32_t imm12)
     {
-        // Load immediate.
-        const uint32_t rs = 0;
-        Emit(Immediate(Opcode::Li, rd, rs, uint32_t(imm12)));
+        // li rd, imm12
+        Emit(Immediate(Opcode::Li, rd, 0, uint32_t(imm12)));
     }
 
     void Lui(uint32_t rd, uint32_t uimm20)
     {
-        // Load upper immediate.
+        // lui rd, imm20
         Emit(Uimm20(Opcode::Lui, rd, uimm20));
     }
 
     void Addi(uint32_t rd, uint32_t rs, int32_t imm12)
     {
-        // Add immediate.
+        // addi rd, rs, imm12
         Emit(Immediate(Opcode::Addi, rd, rs, uint32_t(imm12)));
     }
 
     void J(int32_t offs20)
     {
-        // Jump.
+        // j offs20
         Emit(CallT(Opcode::J, 0, uint32_t(offs20)));
     }
 
     void Mv(uint32_t rd, uint32_t rs)
     {
-        // Move.
+        // mv rd, rs
         Emit(Immediate(Opcode::Mv, rd, rs, 0));
     }
 
     void Call(int32_t offs20)
     {
-        // Call.
+        // call offs20
         Emit(CallT(Opcode::Call, ra, uint32_t(offs20)));
     }
 
     void Beq(uint32_t rs1, uint32_t rs2, int32_t offs12)
     {
-        // Branch if equal.
+        // beq rs1, rs2, offs12
         Emit(Branch(Opcode::Beq, rs1, rs2, uint32_t(offs12)));
     }
 
     void Bltu(uint32_t rs1, uint32_t rs2, int32_t offs12)
     {
-        // Branch if less than (unsigned).
+        // bltu rs1, rs2, offs12
         Emit(Branch(Opcode::Bltu, rs1, rs2, uint32_t(offs12)));
     }
 
     void Add(uint32_t rd, uint32_t rs1, uint32_t rs2)
     {
-        // Add registers.
+        // add rd, rs1, rs2
         Emit(Reg(Opcode::Add, rd, rs1, rs2));
     }
 };
@@ -371,6 +365,8 @@ public:
 std::vector<uint32_t> Assemble()
 {
     Assembler a;
+
+    // Offsets to labels.
     const int32_t fib = 24;
     const int32_t print_loop1 = -24;
     const int32_t print_loop2 = -60;
@@ -379,35 +375,35 @@ std::vector<uint32_t> Assemble()
     const int32_t fib_loop = -16;
 
     // clang-format off
-                        // main:
-    a.Li(s0, 0);                // 0000     li      s0, 0                   ; i = 0
-    a.Li(s2, 2);                // 0004     li      s2, 2                   ; s2 = 2
-    a.Lui(a0, 1);               // 0008     lui     a0, %hi(format_str)
-    a.Addi(s1, a0, -548);       // 000c     addi    s1, a0, %lo(format_str) ; s1 = the address of the printf format string
-    a.Li(s3, 48);               // 0010     li      s3, 48                  ; s3 = 48
-    a.Li(s4, 1);                // 0014     li      s4, 1                   ; s4 = 1
-    a.J(fib);                   // 0018     j       fib                     ; go to fib
-                        // print_loop:
-    a.Mv(a0, s1);               // 001c     mv      a0, s1                  ; arg0 = the address of the printf format string
-    a.Mv(a1, s0);               // 0020     mv      a1, s0                  ; arg1 = i (arg2 contains current)
-    a.Call(printf);             // 0024     call    printf                  ; call printf
-    a.Addi(s0, s0, 1);          // 0028     addi    s0, s0, 1               ; i = i + 1
-    a.Beq(s0, s3, done);        // 002c     beq     s0, s3, done            ; if i == 48 go to done
-                        // fib:
-    a.Mv(a2, s0);               // 0030     mv      a2, s0                  ; current = i
-    a.Bltu(s0, s2, print_loop1);// 0034     bltu    s0, s2, print_loop      ; if i < 2 go to print_loop
-    a.Li(a0, 0);                // 0038     li      a0, 0                   ; previous = 0
-    a.Li(a2, 1);                // 003c     li      a2, 1                   ; current = 1
-    a.Mv(a1, s0);               // 0040     mv      a1, s0                  ; n = i
-                        // fib_loop:
-    a.Mv(a3, a2);               // 0044     mv      a3, a2                  ; tmp = current
-    a.Addi(a1, a1, -1);         // 0048     addi    a1, a1, -1              ; n = n - 1
-    a.Add(a2, a0, a2);          // 004c     add     a2, a0, a2              ; current = current + prev
-    a.Mv(a0, a3);               // 0050     mv      a0, a3                  ; previous = tmp
-    a.Bltu(s4, a1, fib_loop);   // 0054     bltu    s4, a1, fib_loop        ; if n > 1 go to fib_loop
-    a.J(print_loop2);           // 0058     j       print_loop              ; go to print_loop
-                        // done:
-    a.Li(a0, 0);                // 005c     li      a0, 0                   ; set the return value of main() to 0
+// main:
+    a.Li(s0, 0);                // 0000: li      s0, 0                   ; i = 0
+    a.Li(s2, 2);                // 0004: li      s2, 2                   ; s2 = 2
+    a.Lui(a0, 1);               // 0008: lui     a0, %hi(format_str)
+    a.Addi(s1, a0, -548);       // 000c: addi    s1, a0, %lo(format_str) ; s1 = the address of the printf format string
+    a.Li(s3, 48);               // 0010: li      s3, 48                  ; s3 = 48
+    a.Li(s4, 1);                // 0014: li      s4, 1                   ; s4 = 1
+    a.J(fib);                   // 0018: j       fib                     ; go to fib
+// print_loop:
+    a.Mv(a0, s1);               // 001c: mv      a0, s1                  ; arg0 = the address of the printf format string
+    a.Mv(a1, s0);               // 0020: mv      a1, s0                  ; arg1 = i (arg2 contains current)
+    a.Call(printf);             // 0024: call    printf                  ; call printf
+    a.Addi(s0, s0, 1);          // 0028: addi    s0, s0, 1               ; i = i + 1
+    a.Beq(s0, s3, done);        // 002c: beq     s0, s3, done            ; if i == 48 go to done
+// fib:
+    a.Mv(a2, s0);               // 0030: mv      a2, s0                  ; current = i
+    a.Bltu(s0, s2, print_loop1);// 0034: bltu    s0, s2, print_loop      ; if i < 2 go to print_loop
+    a.Li(a0, 0);                // 0038: li      a0, 0                   ; previous = 0
+    a.Li(a2, 1);                // 003c: li      a2, 1                   ; current = 1
+    a.Mv(a1, s0);               // 0040: mv      a1, s0                  ; n = i
+// fib_loop:
+    a.Mv(a3, a2);               // 0044: mv      a3, a2                  ; tmp = current
+    a.Addi(a1, a1, -1);         // 0048: addi    a1, a1, -1              ; n = n - 1
+    a.Add(a2, a0, a2);          // 004c: add     a2, a0, a2              ; current = current + prev
+    a.Mv(a0, a3);               // 0050: mv      a0, a3                  ; previous = tmp
+    a.Bltu(s4, a1, fib_loop);   // 0054: bltu    s4, a1, fib_loop        ; if n > 1 go to fib_loop
+    a.J(print_loop2);           // 0058: j       print_loop              ; go to print_loop
+// done:
+    a.Li(a0, 0);                // 005c: li      a0, 0                   ; set the return value of main() to 0
     // clang-format on
 
     // Emit an illegal instruction so that we have something to stop us.
