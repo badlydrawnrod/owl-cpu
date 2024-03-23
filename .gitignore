@@ -4,6 +4,7 @@
 .vscode/
 build/
 cmake-build-*/
+out/
 prefix/
 .clangd
 CMakeLists.txt.user
