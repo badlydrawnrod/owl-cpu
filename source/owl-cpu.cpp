@@ -120,7 +120,7 @@ struct Branch
     // | offs12 | unused | rs2 | rs1 | opc |
     // |     12 |      3 |   5 |   5 |   7 |
     // +--------+--------+-----+-----+-----+
-    // Note: shift offs12 by 19 not 20 because the normal decoder has already done the multiply by 2
+    // TODO: Check. Note: shift offs12 by 19 not 20 because the normal decoder has already done the multiply by 2
     Branch(Opcode opc, uint32_t rs1, uint32_t rs2, uint32_t offs12)
         : v{(offs12 << 19) | (rs2 << 12) | (rs1 << 7) | uint32_t(opc)}
     {
@@ -143,7 +143,7 @@ struct CallT
     // | offs20 | rd | opc |
     // |     20 |  5 |   7 |
     // +--------+----+-----+
-    // Note: shift offs12 by 11 not 12 because the normal decoder has already done the multiply by 2
+    // TODO: Check. Note: shift offs12 by 11 not 12 because the normal decoder has already done the multiply by 2
     CallT(Opcode opc, uint32_t rd, uint32_t offs20) : v{(offs20 << 11) | (rd << 7) | uint32_t(opc)} {}
 
     operator uint32_t() const { return v; }
@@ -162,7 +162,6 @@ struct Uimm20
     // | imm20 | rd | opc |
     // |    20 |  5 |   7 |
     // +-------+----+-----+
-    // Note: don't shift uimm because the normal decoder has already done it???
     Uimm20(Opcode opc, uint32_t rd, uint32_t imm20) : v{(imm20 << 12) | (rd << 7) | uint32_t(opc)} {}
 
     operator uint32_t() const { return v; }
@@ -177,7 +176,6 @@ private:
 
 struct Decode
 {
-
     Decode(uint32_t value) : v{value} {}
 
     Opcode Op() const { return Opcode(v & 0x7f); }
@@ -381,7 +379,7 @@ std::vector<uint32_t> Assemble()
     const int32_t fib_loop = -16;
 
     // clang-format off
-                            // main:
+                        // main:
     a.Li(s0, 0);                // 0000     li      s0, 0                   ; i = 0
     a.Li(s2, 2);                // 0004     li      s2, 2                   ; s2 = 2
     a.Lui(a0, 1);               // 0008     lui     a0, %hi(format_str)
@@ -389,26 +387,26 @@ std::vector<uint32_t> Assemble()
     a.Li(s3, 48);               // 0010     li      s3, 48                  ; s3 = 48
     a.Li(s4, 1);                // 0014     li      s4, 1                   ; s4 = 1
     a.J(fib);                   // 0018     j       fib                     ; go to fib
-                            // print_loop:
+                        // print_loop:
     a.Mv(a0, s1);               // 001c     mv      a0, s1                  ; arg0 = the address of the printf format string
     a.Mv(a1, s0);               // 0020     mv      a1, s0                  ; arg1 = i (arg2 contains current)
     a.Call(printf);             // 0024     call    printf                  ; call printf
     a.Addi(s0, s0, 1);          // 0028     addi    s0, s0, 1               ; i = i + 1
     a.Beq(s0, s3, done);        // 002c     beq     s0, s3, done            ; if i == 48 go to done
-                            // fib:
+                        // fib:
     a.Mv(a2, s0);               // 0030     mv      a2, s0                  ; current = i
     a.Bltu(s0, s2, print_loop1);// 0034     bltu    s0, s2, print_loop      ; if i < 2 go to print_loop
     a.Li(a0, 0);                // 0038     li      a0, 0                   ; previous = 0
     a.Li(a2, 1);                // 003c     li      a2, 1                   ; current = 1
     a.Mv(a1, s0);               // 0040     mv      a1, s0                  ; n = i
-                            // fib_loop:
+                        // fib_loop:
     a.Mv(a3, a2);               // 0044     mv      a3, a2                  ; tmp = current
     a.Addi(a1, a1, -1);         // 0048     addi    a1, a1, -1              ; n = n - 1
     a.Add(a2, a0, a2);          // 004c     add     a2, a0, a2              ; current = current + prev
     a.Mv(a0, a3);               // 0050     mv      a0, a3                  ; previous = tmp
     a.Bltu(s4, a1, fib_loop);   // 0054     bltu    s4, a1, fib_loop        ; if n > 1 go to fib_loop
     a.J(print_loop2);           // 0058     j       print_loop              ; go to print_loop
-                            // done:
+                        // done:
     a.Li(a0, 0);                // 005c     li      a0, 0                   ; set the return value of main() to 0
     // clang-format on
 
