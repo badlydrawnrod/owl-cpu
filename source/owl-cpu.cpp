@@ -10,41 +10,14 @@ struct Owl
     uint32_t x[32];
 };
 
+// clang-format off
 enum
 {
-    zero,
-    ra,
-    sp,
-    gp,
-    tp,
-    t0,
-    t1,
-    t2,
-    s0,
-    s1,
-    a0,
-    a1,
-    a2,
-    a3,
-    a4,
-    a5,
-    a6,
-    a7,
-    s2,
-    s3,
-    s4,
-    s5,
-    s6,
-    s7,
-    s8,
-    s9,
-    s10,
-    s11,
-    t3,
-    t4,
-    t5,
-    t6
+    zero, ra, sp, gp, tp,  t0,  t1, t2, s0, s1, a0,
+    a1,   a2, a3, a4, a5,  a6,  a7, s2, s3, s4, s5,
+    s6,   s7, s8, s9, s10, s11, t3, t4, t5, t6
 };
+// clang-format on
 
 static const char* regnames[] = {"zero", "ra", "sp", "gp", "tp",  "t0",  "t1", "t2", "s0", "s1", "a0",
                                  "a1",   "a2", "a3", "a4", "a5",  "a6",  "a7", "s2", "s3", "s4", "s5",
@@ -187,8 +160,19 @@ struct Decode
 };
 static_assert(sizeof(Decode) == sizeof(uint32_t));
 
-auto Run(const std::uint32_t* code)
+enum class Mode
 {
+    run,
+    disassemble,
+    trace
+};
+
+template<Mode mode = Mode::run>
+void Run(const std::uint32_t* code)
+{
+    constexpr bool isTrace = (mode == Mode::disassemble) || (mode == Mode::trace);
+    constexpr bool isRun = (mode == Mode::run) || (mode == Mode::trace);
+
     uint32_t pc = 0;
     uint32_t x[32] = {};
     uint32_t nextPc = 0;
@@ -202,7 +186,10 @@ auto Run(const std::uint32_t* code)
         nextPc = pc + sizeof(*code);
         const uint32_t word = code[pc / sizeof(*code)];
 
-        std::cout << std::format("{:04x}: ", pc);
+        if constexpr (isTrace)
+        {
+            std::cout << std::format("{:04x}: ", pc);
+        }
 
         // Decode it into an instruction.
         const auto instruction = Decode(word);
@@ -215,28 +202,46 @@ auto Run(const std::uint32_t* code)
             auto rd = instruction.reg.rd();
             auto rs1 = instruction.reg.rs1();
             auto rs2 = instruction.reg.rs2();
-            std::cout << std::format("add {}, {}, {}\n", regnames[rd], regnames[rs1], regnames[rs2]);
-            x[rd] = x[rs1] + x[rs2];
-            x[0] = 0;
+            if constexpr (isTrace)
+            {
+                std::cout << std::format("add {}, {}, {}\n", regnames[rd], regnames[rs1], regnames[rs2]);
+            }
+            if constexpr (isRun)
+            {
+                x[rd] = x[rs1] + x[rs2];
+                x[0] = 0;
+            }
             break;
         }
         case Opcode::Addi: {
             auto rd = instruction.immediate.rd();
             auto rs = instruction.immediate.rs();
             auto sximm12 = instruction.immediate.sximm12();
-            std::cout << std::format("addi {}, {}, {}\n", regnames[rd], regnames[rs], sximm12);
-            x[rd] = x[rs] + sximm12;
-            x[0] = 0;
+            if constexpr (isTrace)
+            {
+                std::cout << std::format("addi {}, {}, {}\n", regnames[rd], regnames[rs], sximm12);
+            }
+            if constexpr (isRun)
+            {
+                x[rd] = x[rs] + sximm12;
+                x[0] = 0;
+            }
             break;
         }
         case Opcode::Beq: {
             auto rs1 = instruction.branch.rs1();
             auto rs2 = instruction.branch.rs2();
             auto sxoffs12 = instruction.branch.sxoffs12();
-            std::cout << std::format("beq {}, {}, {:04x}\n", regnames[rs1], regnames[rs2], pc + sxoffs12);
-            if (x[rs1] == x[rs2])
+            if constexpr (isTrace)
             {
-                nextPc = pc + sxoffs12;
+                std::cout << std::format("beq {}, {}, {:04x}\n", regnames[rs1], regnames[rs2], pc + sxoffs12);
+            }
+            if constexpr (isRun)
+            {
+                if (x[rs1] == x[rs2])
+                {
+                    nextPc = pc + sxoffs12;
+                }
             }
             break;
         }
@@ -244,55 +249,94 @@ auto Run(const std::uint32_t* code)
             auto rs1 = instruction.branch.rs1();
             auto rs2 = instruction.branch.rs2();
             auto sxoffs12 = instruction.branch.sxoffs12();
-            std::cout << std::format("bltu {}, {}, {:04x}\n", regnames[rs1], regnames[rs2], pc + sxoffs12);
-            if (x[rs1] < x[rs2])
+            if constexpr (isTrace)
             {
-                nextPc = pc + sxoffs12;
+                std::cout << std::format("bltu {}, {}, {:04x}\n", regnames[rs1], regnames[rs2], pc + sxoffs12);
+            }
+            if constexpr (isRun)
+            {
+                if (x[rs1] < x[rs2])
+                {
+                    nextPc = pc + sxoffs12;
+                }
             }
             break;
         }
         case Opcode::Call: {
             auto sxoffs20 = instruction.call.sxoffs20();
-            std::cout << std::format("call {}\n", pc + sxoffs20);
-            x[ra] = pc + 4;
-            x[0] = 0;
-            // nextPc = pc + sxoffs20;
-            std::cout << std::format(">>> fib({}) = {}\n", x[a1], x[a2]);
+            if constexpr (isTrace)
+            {
+                std::cout << std::format("call {}\n", pc + sxoffs20);
+            }
+            if constexpr (isRun)
+            {
+                x[ra] = pc + 4;
+                x[0] = 0;
+                // nextPc = pc + sxoffs20;
+                std::cout << std::format("fib({}) = {}\n", x[a1], x[a2]);
+            }
             break;
         }
         case Opcode::J: {
             auto sxoffs20 = instruction.call.sxoffs20();
-            std::cout << std::format("j {:04x}\n", pc + sxoffs20);
-            nextPc = pc + sxoffs20;
+            if constexpr (isTrace)
+            {
+                std::cout << std::format("j {:04x}\n", pc + sxoffs20);
+            }
+            if constexpr (isRun)
+            {
+                nextPc = pc + sxoffs20;
+            }
             break;
         }
         case Opcode::Li: {
             auto rd = instruction.immediate.rd();
             auto sximm12 = instruction.immediate.sximm12();
-            std::cout << std::format("li {}, {}\n", regnames[rd], pc + sximm12);
-            x[rd] = sximm12;
-            x[0] = 0;
+            if constexpr (isTrace)
+            {
+                std::cout << std::format("li {}, {}\n", regnames[rd], pc + sximm12);
+            }
+            if constexpr (isRun)
+            {
+                x[rd] = sximm12;
+                x[0] = 0;
+            }
             break;
         }
         case Opcode::Lui: {
             auto rd = instruction.lui.rd();
             auto zximm20 = instruction.lui.zximm20();
-            std::cout << std::format("lui {}, {}\n", regnames[rd], zximm20);
-            x[rd] = zximm20 << 12;
-            x[0] = 0;
+            if constexpr (isTrace)
+            {
+                std::cout << std::format("lui {}, {}\n", regnames[rd], zximm20);
+            }
+            if constexpr (isRun)
+            {
+                x[rd] = zximm20 << 12;
+                x[0] = 0;
+            }
             break;
         }
         case Opcode::Mv: {
             auto rd = instruction.immediate.rd();
             auto rs = instruction.immediate.rs();
-            std::cout << std::format("mv {}, {}\n", regnames[rd], regnames[rs]);
-            x[rd] = x[rs];
-            x[0] = 0;
+            if constexpr (isTrace)
+            {
+                std::cout << std::format("mv {}, {}\n", regnames[rd], regnames[rs]);
+            }
+            if constexpr (isRun)
+            {
+                x[rd] = x[rs];
+                x[0] = 0;
+            }
             break;
         }
         default:
             // Illegal instruction.
-            std::cout << std::format("illegal opcode {}\n", uint32_t(opcode));
+            if constexpr (isTrace)
+            {
+                std::cout << std::format("illegal opcode {}\n", uint32_t(opcode));
+            }
             done = true;
         }
     }
@@ -415,9 +459,6 @@ std::vector<uint32_t> Assemble()
 int main()
 {
     auto code = Assemble();
-    for (auto ins : code)
-    {
-        std::cout << std::format("{:08x}\n", ins);
-    }
-    Run(code.data());
+
+    Run<Mode::run>(code.data());
 }
