@@ -1,6 +1,6 @@
 # owl-cpu
 
-This is the owl-cpu project.
+This is the owl-cpu project. (WIP)
 
 # Building and installing
 
