@@ -211,19 +211,20 @@ public:
         return {};
     }
 
-    void FixOffs12(uint32_t addr, int32_t disp)
+    template<FixupType type>
+    void ResolveFixup(uint32_t addr, int32_t offset)
     {
         auto existing = code_[size_t(addr) / 4];
-        existing &= 0x000fffff;
-        existing |= encode::offs12(disp);
-        code_[size_t(addr) / 4] = existing;
-    }
-
-    void FixOffs20(uint32_t addr, int32_t disp)
-    {
-        auto existing = code_[size_t(addr) / 4];
-        existing &= 0x00000fff;
-        existing |= encode::offs20(disp);
+        if constexpr (type == FixupType::offs12)
+        {
+            existing &= 0x000fffff;
+            existing |= encode::offs12(offset);
+        }
+        else if constexpr (type == FixupType::offs20)
+        {
+            existing &= 0x00000fff;
+            existing |= encode::offs20(offset);
+        }
         code_[size_t(addr) / 4] = existing;
     }
 
@@ -241,15 +242,15 @@ public:
             {
                 if (fixup.type == FixupType::offs12)
                 {
-                    FixOffs12(fixup.target, address - fixup.target);
+                    ResolveFixup<FixupType::offs12>(fixup.target, address - fixup.target);
                 }
                 else if (fixup.type == FixupType::offs20)
                 {
-                    FixOffs20(fixup.target, address - fixup.target);
+                    ResolveFixup<FixupType::offs20>(fixup.target, address - fixup.target);
                 }
             }
 
-            // We don't need the fixups any more.
+            // We don't need these fixups any more.
             fixups_.erase(id);
         }
     }
@@ -261,14 +262,10 @@ public:
         return Label(labelId);
     }
 
-    void AddFixupOffs12(Label label)
+    template<FixupType type>
+    void AddFixup(Label label)
     {
-        fixups_.emplace(label.Id(), FixupEntry{.target = Current(), .type = FixupType::offs12});
-    }
-
-    void AddFixupOffs20(Label label)
-    {
-        fixups_.emplace(label.Id(), FixupEntry{.target = Current(), .type = FixupType::offs20});
+        fixups_.emplace(label.Id(), FixupEntry{.target = Current(), .type = type});
     }
 
     const std::vector<uint32_t>& Code() const
@@ -312,7 +309,7 @@ public:
         }
         else
         {
-            AddFixupOffs12(label);
+            AddFixup<FixupType::offs12>(label);
             Beq(r0, r1, 0);
         }
     }
@@ -331,7 +328,7 @@ public:
         }
         else
         {
-            AddFixupOffs12(label);
+            AddFixup<FixupType::offs12>(label);
             Bltu(r0, r1, 0);
         }
     }
@@ -350,7 +347,7 @@ public:
         }
         else
         {
-            AddFixupOffs20(label);
+            AddFixup<FixupType::offs20>(label);
             Call(0);
         }
     }
@@ -369,7 +366,7 @@ public:
         }
         else
         {
-            AddFixupOffs20(label);
+            AddFixup<FixupType::offs20>(label);
             J(0);
         }
     }
