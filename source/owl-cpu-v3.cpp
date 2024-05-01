@@ -173,38 +173,31 @@ public:
     uint32_t Id() const { return id_; }
 };
 
-enum class FixupType
-{
-    offs12,
-    offs20
-};
-
-struct FixupEntry
-{
-    uint32_t target; // The address that contains the data to be fixed up.
-    FixupType type;  // The type that needs to be fixed up.
-};
 
 class Assembler
 {
     static constexpr int32_t badAddress = -1;
 
-    struct LabelEntry
+    enum class FixupType { offs12, offs20 };
+
+    struct FixupEntry
     {
-        int32_t address;
+        uint32_t target; // The address that contains the data to be fixed up.
+        FixupType type;  // The type that needs to be fixed up.
     };
-    std::vector<LabelEntry> labels_;
+
+    using LabelEntry = int32_t;
 
     std::vector<uint32_t> code_;
     uint32_t current_{};
+    std::vector<LabelEntry> labels_;
     std::multimap<uint32_t, FixupEntry> fixups_;
 
-public:
     uint32_t Current() const { return current_; }
 
     std::optional<uint32_t> AddressOf(Label label)
     {
-        if (auto result = labels_[size_t(label.Id())].address; result != badAddress)
+        if (auto result = labels_[size_t(label.Id())]; result != badAddress)
         {
             return result;
         }
@@ -217,22 +210,27 @@ public:
         auto existing = code_[size_t(addr) / 4];
         if constexpr (type == FixupType::offs12)
         {
-            existing &= 0x000fffff;
-            existing |= encode::offs12(offset);
+            existing = (existing & 0x000fffff) | encode::offs12(offset);
         }
         else if constexpr (type == FixupType::offs20)
         {
-            existing &= 0x00000fff;
-            existing |= encode::offs20(offset);
+            existing = (existing & 0x00000fff) | encode::offs20(offset);
         }
         code_[size_t(addr) / 4] = existing;
     }
 
+    template<FixupType type>
+    void AddFixup(Label label)
+    {
+        fixups_.emplace(label.Id(), FixupEntry{.target = Current(), .type = type});
+    }
+
+public:
     void BindLabel(Label label)
     {
         const auto id = label.Id();
         const auto address = Current();
-        labels_[size_t(id)].address = address;
+        labels_[size_t(id)] = address;
 
         // Find all the fixups for this label id.
         if (auto fixupsForId = fixups_.equal_range(id); fixupsForId.first != fixups_.end())
@@ -240,13 +238,14 @@ public:
             // Resolve the fixups.
             for (auto [_, fixup] : std::ranges::subrange(fixupsForId.first, fixupsForId.second))
             {
+                const auto offset = address - fixup.target;
                 if (fixup.type == FixupType::offs12)
                 {
-                    ResolveFixup<FixupType::offs12>(fixup.target, address - fixup.target);
+                    ResolveFixup<FixupType::offs12>(fixup.target, offset);
                 }
                 else if (fixup.type == FixupType::offs20)
                 {
-                    ResolveFixup<FixupType::offs20>(fixup.target, address - fixup.target);
+                    ResolveFixup<FixupType::offs20>(fixup.target, offset);
                 }
             }
 
@@ -258,14 +257,8 @@ public:
     Label MakeLabel()
     {
         uint32_t labelId = uint32_t(labels_.size());
-        labels_.push_back(LabelEntry{.address = badAddress});
+        labels_.push_back(badAddress);
         return Label(labelId);
-    }
-
-    template<FixupType type>
-    void AddFixup(Label label)
-    {
-        fixups_.emplace(label.Id(), FixupEntry{.target = Current(), .type = type});
     }
 
     const std::vector<uint32_t>& Code() const
