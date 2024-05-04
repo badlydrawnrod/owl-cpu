@@ -5,8 +5,41 @@
 #include <vector>
 
 // Symbolic register names.
-enum { zero, ra, sp, gp, tp, t0, t1, t2, s0, s1, a0, a1, a2, a3, a4, a5, a6, a7,
-       s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, t3, t4, t5, t6 };
+enum
+{
+    zero,
+    ra,
+    sp,
+    gp,
+    tp,
+    t0,
+    t1,
+    t2,
+    s0,
+    s1,
+    a0,
+    a1,
+    a2,
+    a3,
+    a4,
+    a5,
+    a6,
+    a7,
+    s2,
+    s3,
+    s4,
+    s5,
+    s6,
+    s7,
+    s8,
+    s9,
+    s10,
+    s11,
+    t3,
+    t4,
+    t5,
+    t6
+};
 
 // Opcodes.
 enum class Opcode : uint32_t
@@ -59,21 +92,20 @@ namespace decode
     {
         return ins & 0xfffff000;
     }
-}
+} // namespace decode
 
 void Run(const uint32_t* code)
 {
     using namespace decode;
-    
+
     // Set pc and nextPc to their initial values.
     uint32_t pc = 0;     // The program counter.
     uint32_t nextPc = 0; // The address of the next instruction.
 
-
     // Set all the integer registers to zero.
     uint32_t x[32] = {}; // The integer registers.
 
-    constexpr uint32_t wordSize = sizeof(uint32_t);    
+    constexpr uint32_t wordSize = sizeof(uint32_t);
 
     bool done = false;
 
@@ -91,14 +123,14 @@ void Run(const uint32_t* code)
         switch (opcode)
         {
         case Opcode::Add: {
-            x[r0(ins)] = x[r1(ins)] + x[r2(ins)];   // Add the two registers.
-            x[0] = 0;                               // Ensure x0 is always zero.
+            x[r0(ins)] = x[r1(ins)] + x[r2(ins)]; // Add the two registers.
+            x[0] = 0;                             // Ensure x0 is always zero.
             break;
         }
 
         case Opcode::Addi: {
-            x[r0(ins)] = x[r1(ins)] + imm12(ins);    // Perform the addition.
-            x[0] = 0;                                // Ensure x0 is always zero.
+            x[r0(ins)] = x[r1(ins)] + imm12(ins); // Perform the addition.
+            x[0] = 0;                             // Ensure x0 is always zero.
             break;
         }
 
@@ -199,15 +231,17 @@ namespace encode
     {
         return (uimm20 << 12) & 0xfffff000;
     }
-}
+} // namespace encode
 
 class Assembler
 {
     std::vector<uint32_t> code_;
 
 public:
-
-    const std::vector<uint32_t>& Code() const { return code_; }
+    const std::vector<uint32_t>& Code() const
+    {
+        return code_;
+    }
 
     void Emit(uint32_t u)
     {

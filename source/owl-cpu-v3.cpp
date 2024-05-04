@@ -7,8 +7,41 @@
 #include <vector>
 
 // Symbolic register names.
-enum { zero, ra, sp, gp, tp, t0, t1, t2, s0, s1, a0, a1, a2, a3, a4, a5, a6, a7,
-       s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, t3, t4, t5, t6 };
+enum
+{
+    zero,
+    ra,
+    sp,
+    gp,
+    tp,
+    t0,
+    t1,
+    t2,
+    s0,
+    s1,
+    a0,
+    a1,
+    a2,
+    a3,
+    a4,
+    a5,
+    a6,
+    a7,
+    s2,
+    s3,
+    s4,
+    s5,
+    s6,
+    s7,
+    s8,
+    s9,
+    s10,
+    s11,
+    t3,
+    t4,
+    t5,
+    t6
+};
 
 // Opcodes.
 enum class Opcode : uint32_t
@@ -27,19 +60,40 @@ enum class Opcode : uint32_t
 
 namespace decode
 {
-    uint32_t r0(const uint32_t ins) { return (ins >> 7) & 0x1f; }
+    uint32_t r0(const uint32_t ins)
+    {
+        return (ins >> 7) & 0x1f;
+    }
 
-    uint32_t r1(const uint32_t ins) { return (ins >> 12) & 0x1f; }
+    uint32_t r1(const uint32_t ins)
+    {
+        return (ins >> 12) & 0x1f;
+    }
 
-    uint32_t r2(const uint32_t ins) { return (ins >> 17) & 0x1f; }
+    uint32_t r2(const uint32_t ins)
+    {
+        return (ins >> 17) & 0x1f;
+    }
 
-    uint32_t imm12(const uint32_t ins) { return static_cast<uint32_t>(static_cast<int32_t>(ins & 0xfff00000) >> 20); }
+    uint32_t imm12(const uint32_t ins)
+    {
+        return static_cast<uint32_t>(static_cast<int32_t>(ins & 0xfff00000) >> 20);
+    }
 
-    uint32_t offs12(const uint32_t ins) { return static_cast<uint32_t>(static_cast<int32_t>(ins & 0xfff00000) >> 19); }
+    uint32_t offs12(const uint32_t ins)
+    {
+        return static_cast<uint32_t>(static_cast<int32_t>(ins & 0xfff00000) >> 19);
+    }
 
-    uint32_t offs20(const uint32_t ins) { return static_cast<uint32_t>(static_cast<int32_t>(ins & 0xfffff000) >> 11); }
+    uint32_t offs20(const uint32_t ins)
+    {
+        return static_cast<uint32_t>(static_cast<int32_t>(ins & 0xfffff000) >> 11);
+    }
 
-    uint32_t uimm20(const uint32_t ins) { return ins & 0xfffff000; }
+    uint32_t uimm20(const uint32_t ins)
+    {
+        return ins & 0xfffff000;
+    }
 } // namespace decode
 
 void Run(const uint32_t* code)
@@ -138,15 +192,30 @@ void Run(const uint32_t* code)
 
 namespace encode
 {
-    uint32_t opc(Opcode opcode) { return uint32_t(opcode); }
+    uint32_t opc(Opcode opcode)
+    {
+        return uint32_t(opcode);
+    }
 
-    uint32_t r0(uint32_t r) { return (r & 0x1f) << 7; }
+    uint32_t r0(uint32_t r)
+    {
+        return (r & 0x1f) << 7;
+    }
 
-    uint32_t r1(uint32_t r) { return (r & 0x1f) << 12; }
+    uint32_t r1(uint32_t r)
+    {
+        return (r & 0x1f) << 12;
+    }
 
-    uint32_t r2(uint32_t r) { return (r & 0x1f) << 17; }
+    uint32_t r2(uint32_t r)
+    {
+        return (r & 0x1f) << 17;
+    }
 
-    uint32_t imm12(int32_t imm12) { return static_cast<uint32_t>(imm12 << 20); }
+    uint32_t imm12(int32_t imm12)
+    {
+        return static_cast<uint32_t>(imm12 << 20);
+    }
 
     uint32_t offs12(int32_t offs12)
     {
@@ -160,44 +229,59 @@ namespace encode
         return static_cast<uint32_t>(offs20 << 11) & 0xfffff000;
     }
 
-    uint32_t uimm20(uint32_t uimm20) { return (uimm20 << 12) & 0xfffff000; }
+    uint32_t uimm20(uint32_t uimm20)
+    {
+        return (uimm20 << 12) & 0xfffff000;
+    }
 } // namespace encode
 
 class Label
 {
-    uint32_t id_;
-
 public:
-    explicit Label(uint32_t id) : id_{id} {}
+    using Id = size_t;
 
-    uint32_t Id() const { return id_; }
+    explicit Label(Id id) : id_{id}
+    {
+    }
+
+    Id GetId() const
+    {
+        return id_;
+    }
+
+private:
+    Id id_;
 };
-
 
 class Assembler
 {
-    static constexpr int32_t badAddress = -1;
+    static constexpr uint32_t badAddress = static_cast<uint32_t>(-1);
 
-    enum class FixupType { offs12, offs20 };
-
-    struct FixupEntry
+    enum class FixupType
     {
-        uint32_t target; // The address that contains the data to be fixed up.
-        FixupType type;  // The type that needs to be fixed up.
+        offs12,
+        offs20
     };
 
-    using LabelEntry = int32_t;
+    struct Fixup
+    {
+        uint32_t target; // The address that contains the data to be fixed up.
+        FixupType type;  // The type of the data that needs to be fixed up.
+    };
 
     std::vector<uint32_t> code_;
     uint32_t current_{};
-    std::vector<LabelEntry> labels_;
-    std::multimap<uint32_t, FixupEntry> fixups_;
+    std::vector<uint32_t> labels_;
+    std::multimap<Label::Id, Fixup> fixups_;
 
-    uint32_t Current() const { return current_; }
+    uint32_t Current() const
+    {
+        return current_;
+    }
 
     std::optional<uint32_t> AddressOf(Label label)
     {
-        if (auto result = labels_[size_t(label.Id())]; result != badAddress)
+        if (auto result = labels_[label.GetId()]; result != badAddress)
         {
             return result;
         }
@@ -207,7 +291,7 @@ class Assembler
     template<FixupType type>
     void ResolveFixup(uint32_t addr, int32_t offset)
     {
-        auto existing = code_[size_t(addr) / 4];
+        auto existing = code_[addr / 4];
         if constexpr (type == FixupType::offs12)
         {
             existing = (existing & 0x000fffff) | encode::offs12(offset);
@@ -216,24 +300,24 @@ class Assembler
         {
             existing = (existing & 0x00000fff) | encode::offs20(offset);
         }
-        code_[size_t(addr) / 4] = existing;
+        code_[addr / 4] = existing;
     }
 
     template<FixupType type>
     void AddFixup(Label label)
     {
-        fixups_.emplace(label.Id(), FixupEntry{.target = Current(), .type = type});
+        fixups_.emplace(label.GetId(), Fixup{.target = Current(), .type = type});
     }
 
 public:
     void BindLabel(Label label)
     {
-        const auto id = label.Id();
+        const auto id = label.GetId();
         const auto address = Current();
-        labels_[size_t(id)] = address;
+        labels_[id] = address;
 
         // Find all the fixups for this label id.
-        if (auto fixupsForId = fixups_.equal_range(id); fixupsForId.first != fixups_.end())
+        if (const auto fixupsForId = fixups_.equal_range(id); fixupsForId.first != fixups_.end())
         {
             // Resolve the fixups.
             for (auto [_, fixup] : std::ranges::subrange(fixupsForId.first, fixupsForId.second))
@@ -256,7 +340,7 @@ public:
 
     Label MakeLabel()
     {
-        uint32_t labelId = uint32_t(labels_.size());
+        auto labelId = labels_.size();
         labels_.push_back(badAddress);
         return Label(labelId);
     }
@@ -288,80 +372,84 @@ public:
         Emit(encode::opc(Opcode::Addi) | encode::r0(r0) | encode::r1(r1) | encode::imm12(imm12));
     }
 
+    template<Opcode opcode>
+    void Branch(uint32_t r0, uint32_t r1, int32_t offs12)
+    {
+        Emit(encode::opc(opcode) | encode::r0(r0) | encode::r1(r1) | encode::offs12(offs12));
+    }
+
+    template<Opcode opcode>
+    void Branch(uint32_t r0, uint32_t r1, Label label)
+    {
+        if (const auto addr = AddressOf(label); addr.has_value())
+        {
+            Branch<opcode>(r0, r1, *addr - Current());
+        }
+        else
+        {
+            AddFixup<FixupType::offs12>(label);
+            Branch<opcode>(r0, r1, 0);
+        }
+    }
+
     void Beq(uint32_t r0, uint32_t r1, int32_t offs12)
     {
-        // beq r0, r1, offs12
-        Emit(encode::opc(Opcode::Beq) | encode::r0(r0) | encode::r1(r1) | encode::offs12(offs12));
+        Branch<Opcode::Beq>(r0, r1, offs12);
     }
 
     void Beq(uint32_t r0, uint32_t r1, Label label)
     {
-        if (const auto addr = AddressOf(label); addr.has_value())
-        {
-            Beq(r0, r1, *addr - Current());
-        }
-        else
-        {
-            AddFixup<FixupType::offs12>(label);
-            Beq(r0, r1, 0);
-        }
+        Branch<Opcode::Beq>(r0, r1, label);
     }
 
     void Bltu(uint32_t r0, uint32_t r1, int32_t offs12)
     {
-        // bltu r0, r1, offs12
-        Emit(encode::opc(Opcode::Bltu) | encode::r0(r0) | encode::r1(r1) | encode::offs12(offs12));
+        Branch<Opcode::Bltu>(r0, r1, offs12);
     }
 
     void Bltu(uint32_t r0, uint32_t r1, Label label)
     {
+        Branch<Opcode::Bltu>(r0, r1, label);
+    }
+
+    template<Opcode opcode>
+    void Jump(int32_t offs20)
+    {
+        Emit(encode::opc(opcode) | encode::offs20(offs20));
+    }
+
+    template<Opcode opcode>
+    void Jump(Label label)
+    {
         if (const auto addr = AddressOf(label); addr.has_value())
         {
-            Bltu(r0, r1, *addr - Current());
+            Jump<opcode>(*addr - Current());
         }
         else
         {
-            AddFixup<FixupType::offs12>(label);
-            Bltu(r0, r1, 0);
+            AddFixup<FixupType::offs20>(label);
+            Jump<opcode>(0);
         }
     }
 
     void Call(int32_t offs20)
     {
-        // call offs20
-        Emit(encode::opc(Opcode::Call) | encode::offs20(offs20));
+        Jump<Opcode::Call>(offs20);
     }
 
     void Call(Label label)
     {
-        if (const auto addr = AddressOf(label); addr.has_value())
-        {
-            Call(*addr - Current());
-        }
-        else
-        {
-            AddFixup<FixupType::offs20>(label);
-            Call(0);
-        }
+        Jump<Opcode::Call>(label);
     }
 
     void J(int32_t offs20)
     {
-        // j offs20
-        Emit(encode::opc(Opcode::J) | encode::offs20(offs20));
+        Jump<Opcode::J>(offs20);
     }
 
     void J(Label label)
     {
-        if (const auto addr = AddressOf(label); addr.has_value())
-        {
-            J(*addr - Current());
-        }
-        else
-        {
-            AddFixup<FixupType::offs20>(label);
-            J(0);
-        }
+        Jump<Opcode::J>(label);
     }
 
     void Li(uint32_t r0, int32_t imm12)
@@ -426,13 +514,13 @@ std::vector<uint32_t> Assemble()
 // done:
     a.BindLabel(done);
     a.Li(a0, 0);                // li   a0, 0                   ; set the return value of main() to 0
-    // clang-format on
 
     // Emit an illegal instruction so that we have something to stop us.
     a.Emit(0);
 
     // Bind `printf` so that returning the code doesn't error.
     a.BindLabel(printf);
+    // clang-format on
 
     return a.Code();
 }
