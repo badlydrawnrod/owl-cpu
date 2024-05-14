@@ -82,15 +82,15 @@ enum class Opcode : uint32_t
     Ori,
     Andi,
     //
-    Lb,  // TODO
-    Lh,  // TODO
-    Lw,  // TODO
-    Lbu, // TODO
-    Lhu, // TODO
+    Lb,
+    Lh,
+    Lw,
+    Lbu,
+    Lhu,
     //
-    Sb, // TODO
-    Sh, // TODO
-    Sw, // TODO
+    Sb,
+    Sh,
+    Sw,
     //
     Fence,
     //
@@ -98,7 +98,8 @@ enum class Opcode : uint32_t
     Lui,
     Auipc,
     //
-    Call, // TODO this is a specialization of Jal or Jalr, but I've hard-coded it to printf(). This needs to change!
+    Call, // TODO this is a specialization of Jal or Jalr, but I've hard-coded it to printf(). This
+          // needs to change!
     J,    // this is a specialization of Jal or Jalr
     Li,   // this is a specialization of Addi
     Mv    // this is a specialization of Add
@@ -147,7 +148,7 @@ namespace decode
     }
 } // namespace decode
 
-void Run(const uint32_t* code)
+void Run(const uint32_t* code, uint8_t* memory)
 {
     using namespace decode;
 
@@ -410,52 +411,77 @@ void Run(const uint32_t* code)
             // Load instructions.
 
         case Opcode::Lb: {
-            // TODO
-            done = true;
+            // r0 <- sext(memory(r1 + imm12))
+            const uint32_t addr = r1(ins) + imm12(ins);
+            const int32_t signExtendedByte = static_cast<int8_t>(memory[addr]);
+            x[r0(ins)] = static_cast<uint32_t>(signExtendedByte);
+            x[0] = 0; // Ensure x0 is always zero.
             break;
         }
 
         case Opcode::Lh: {
-            // TODO
-            done = true;
+            // r0 <- sext(memory16(r1 + imm12))
+            const uint32_t addr = r1(ins) + imm12(ins);
+            const int32_t signExtendedHalfWord =
+                    static_cast<int16_t>(memory[addr] + (memory[addr + 1] << 8));
+            x[r0(ins)] = static_cast<uint32_t>(signExtendedHalfWord);
+            x[0] = 0; // Ensure x0 is always zero.
             break;
         }
 
         case Opcode::Lw: {
-            // TODO
-            done = true;
+            // r0 <- memory32(r1 + imm12)
+            const uint32_t addr = r1(ins) + imm12(ins);
+            const uint32_t word = memory[addr] | (memory[addr + 1] << 8) | (memory[addr + 2] << 16)
+                    | (memory[addr + 3] << 24);
+            x[r0(ins)] = word;
+            x[0] = 0; // Ensure x0 is always zero.
             break;
         }
 
         case Opcode::Lbu: {
-            // TODO
-            done = true;
+            // r0 <- zext(memory(r1 + imm12))
+            const uint32_t addr = r1(ins) + imm12(ins);
+            x[r0(ins)] = memory[addr];
+            x[0] = 0; // Ensure x0 is always zero.
             break;
         }
 
         case Opcode::Lhu: {
-            // TODO
-            done = true;
+            // r0 <- zext(memory16(r1 + imm12))
+            const uint32_t addr = r1(ins) + imm12(ins);
+            const uint32_t zeroExtendedHalfWord = memory[addr] | (memory[addr + 1] << 8);
+            x[r0(ins)] = zeroExtendedHalfWord;
+            x[0] = 0; // Ensure x0 is always zero.
             break;
         }
 
             // Store instructions.
 
         case Opcode::Sb: {
-            // TODO
-            done = true;
+            // memory(r0 + imm12) <- r1[7:0]
+            const uint32_t addr = r0(ins) + imm12(ins);
+            memory[addr] = r1(ins) & 0xff;
             break;
         }
 
         case Opcode::Sh: {
-            // TODO
-            done = true;
+            // memory16(r0 + imm12) <- r1[15:0]
+            const uint32_t addr = r0(ins) + imm12(ins);
+            const uint32_t v = r1(ins);
+            memory[addr] = v & 0xff;
+            memory[addr + 1] = (v >> 8) & 0xff;
             break;
         }
 
         case Opcode::Sw: {
-            // TODO
-            done = true;
+            // memory32(r0 + imm12) <- r1
+            const uint32_t addr = r0(ins) + imm12(ins);
+            const uint32_t v = r1(ins);
+            memory[addr] = v & 0xff;
+            memory[addr + 1] = (v >> 8) & 0xff;
+            memory[addr + 2] = (v >> 16) & 0xff;
+            memory[addr + 3] = (v >> 24) & 0xff;
             break;
         }
 
@@ -864,8 +890,10 @@ int main()
 {
     try
     {
+        constexpr size_t memSize = 1024;
+        std::vector<uint8_t> memory(memSize);
         auto code = Assemble();
-        Run(code.data());
+        Run(code.data(), memory.data());
     }
     catch (const std::exception& e)
     {
