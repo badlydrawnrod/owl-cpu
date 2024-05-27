@@ -1,3 +1,5 @@
+// Introduce syscalls.
+
 #include <cstdint>
 #include <format>
 #include <iostream>
@@ -47,62 +49,16 @@ enum
 enum class Opcode : uint32_t
 {
     Illegal = 0,
-    //
-    Ecall,  // TODO
-    Ebreak, // TODO
-    //
+    Ecall,
     Add,
-    Sub,
-    Sll,
-    Slt,
-    Sltu,
-    Xor,
-    Srl,
-    Sra,
-    Or,
-    And,
-    //
-    Slli,
-    Srli,
-    Srai,
-    //
-    Beq,
-    Bne,
-    Blt,
-    Bge,
-    Bltu,
-    Bgeu,
-    //
-    Jalr,
-    //
     Addi,
-    Slti,
-    Sltiu,
-    Xori,
-    Ori,
-    Andi,
-    //
-    Lb,
-    Lh,
-    Lw,
-    Lbu,
-    Lhu,
-    //
-    Sb,
-    Sh,
-    Sw,
-    //
-    Fence,
-    //
-    Jal,
+    Beq,
+    Bltu,
+    Call,
+    J,
+    Li,
     Lui,
-    Auipc,
-    //
-    Call, // TODO this is a specialization of Jal or Jalr, but I've hard-coded it to printf(). This
-          // needs to change!
-    J,    // this is a specialization of Jal or Jalr
-    Li,   // this is a specialization of Addi
-    Mv    // this is a specialization of Add
+    Mv
 };
 
 namespace decode
@@ -118,11 +74,6 @@ namespace decode
     }
 
     uint32_t r2(const uint32_t ins)
-    {
-        return (ins >> 17) & 0x1f;
-    }
-
-    uint32_t shiftimm(const uint32_t ins)
     {
         return (ins >> 17) & 0x1f;
     }
@@ -148,7 +99,13 @@ namespace decode
     }
 } // namespace decode
 
-void Run(const uint32_t* code, uint8_t* memory)
+enum class Syscall
+{
+    Exit,
+    PrintFib
+};
+
+void Run(const uint32_t* code)
 {
     using namespace decode;
 
@@ -176,125 +133,37 @@ void Run(const uint32_t* code, uint8_t* memory)
         // Dispatch it and execute it.
         switch (opcode)
         {
-            // Syscall instructions.
-
         case Opcode::Ecall: {
-            // TODO
-            done = true;
+            const auto syscall = Syscall(x[a0]);
+            switch (syscall)
+            {
+            case Syscall::Exit:
+                std::cout << std::format("Exiting with status {}\n", x[a1]);
+                done = true;
+                break;
+            case Syscall::PrintFib:
+                std::cout << std::format("fib({}) = {}\n", x[a1], x[a2]);
+                break;
+            default:
+                done = true;
+            }
             break;
         }
-
-        case Opcode::Ebreak: {
-            // TODO
-            done = true;
-            break;
-        }
-
-            // Integer register-register instructions.
 
         case Opcode::Add: {
-            // r0 <- r1 + r2
-            x[r0(ins)] = x[r1(ins)] + x[r2(ins)];
-            x[0] = 0; // Ensure x0 is always zero.
+            x[r0(ins)] = x[r1(ins)] + x[r2(ins)]; // Add the two registers.
+            x[0] = 0;                             // Ensure x0 is always zero.
             break;
         }
 
-        case Opcode::Sub: {
-            // r0 <- r1 - r2
-            x[r0(ins)] = x[r1(ins)] - x[r2(ins)];
-            x[0] = 0; // Ensure x0 is always zero.
+        case Opcode::Addi: {
+            x[r0(ins)] = x[r1(ins)] + imm12(ins); // Perform the addition.
+            x[0] = 0;                             // Ensure x0 is always zero.
             break;
         }
-
-        case Opcode::Sll: {
-            // r0 <- r1 << (r2 % 32)
-            x[r0(ins)] = x[r1(ins)] << (x[r2(ins)] % 32);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Slt: {
-            // r0 <- (r1 < r2) ? 1 : 0 (signed integer comparison)
-            const int32_t sr1 = static_cast<int32_t>(x[r1(ins)]);
-            const int32_t sr2 = static_cast<int32_t>(x[r2(ins)]);
-            x[r0(ins)] = sr1 < sr2 ? 1 : 0;
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Sltu: {
-            // r0 <- (r1 < r2) ? 1 : 0 (unsigned integer comparison)
-            x[r0(ins)] = x[r1(ins)] < x[r2(ins)] ? 1 : 0;
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Xor: {
-            // r0 <- r1 ^ r2
-            x[r0(ins)] = x[r1(ins)] ^ x[r2(ins)];
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Srl: {
-            // r0 <- r1 >> (r2 % 32) (shift right logical)
-            x[r0(ins)] = x[r1(ins)] >> (x[r2(ins)] % 32);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Sra: {
-            // r0 <- r1 >> (r2 % 32) (shift right arithmetic)
-            const int32_t sr1 = static_cast<int32_t>(x[r1(ins)]);
-            const int32_t shift = static_cast<int32_t>(x[r2(ins)]) % 32;
-            x[r0(ins)] = static_cast<uint32_t>(sr1 >> shift);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Or: {
-            // r0 <- r1 | r2
-            x[r0(ins)] = x[r1(ins)] | x[r2(ins)];
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::And: {
-            // r0 <- r1 & r2
-            x[r0(ins)] = x[r1(ins)] & x[r2(ins)];
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-            // Immediate shift instructions.
-
-        case Opcode::Slli: {
-            // r0 <- r1 << shiftimm
-            x[r0(ins)] = x[r1(ins)] << shiftimm(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Srli: {
-            // r0 <- r1 >> shiftimm (shift right logical)
-            const int32_t sr1 = static_cast<int32_t>(x[r1(ins)]);
-            const int32_t shift = shiftimm(ins);
-            x[r0(ins)] = static_cast<uint32_t>(sr1 >> shift);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Srai: {
-            // r0 <- r1 >> shiftimm (shift right logical)
-            x[r0(ins)] = x[r1(ins)] >> shiftimm(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-            // Conditional branch instructions.
 
         case Opcode::Beq: {
-            // pc <- pc + ((r0 == r1) ? offs12 : 4)
+            // Perform the comparison.
             if (x[r0(ins)] == x[r1(ins)])
             {
                 nextPc = pc + offs12(ins); // Take the branch.
@@ -302,39 +171,8 @@ void Run(const uint32_t* code, uint8_t* memory)
             break;
         }
 
-        case Opcode::Bne: {
-            // pc <- pc + ((r0 != r1) ? offs12 : 4)
-            if (x[r0(ins)] != x[r1(ins)])
-            {
-                nextPc = pc + offs12(ins); // Take the branch.
-            }
-            break;
-        }
-
-        case Opcode::Blt: {
-            // pc <- pc + ((r0 < r1) ? offs12 : 4) (signed integer comparison)
-            int32_t sr0 = static_cast<int32_t>(x[r0(ins)]);
-            int32_t sr1 = static_cast<int32_t>(x[r1(ins)]);
-            if (sr0 < sr1)
-            {
-                nextPc = pc + offs12(ins); // Take the branch.
-            }
-            break;
-        }
-
-        case Opcode::Bge: {
-            // pc <- pc + ((r0 >= r1) ? offs12 : 4) (signed integer comparison)
-            int32_t sr0 = static_cast<int32_t>(x[r0(ins)]);
-            int32_t sr1 = static_cast<int32_t>(x[r1(ins)]);
-            if (sr0 >= sr1)
-            {
-                nextPc = pc + offs12(ins); // Take the branch.
-            }
-            break;
-        }
-
         case Opcode::Bltu: {
-            // pc <- pc + ((r0 < r1) ? offs12 : 4) (unsigned integer comparison)
+            // Perform the comparison.
             if (x[r0(ins)] < x[r1(ins)])
             {
                 nextPc = pc + offs12(ins); // Take the branch.
@@ -342,202 +180,29 @@ void Run(const uint32_t* code, uint8_t* memory)
             break;
         }
 
-        case Opcode::Bgeu: {
-            // pc <- pc + ((r0 >= r1) ? offs12 : 4) (unsigned integer comparison)
-            if (x[r0(ins)] >= x[r1(ins)])
-            {
-                nextPc = pc + offs12(ins); // Take the branch.
-            }
-            break;
-        }
-
-            // Misc
-
-        case Opcode::Jalr: {
-            // r0 <- pc + 4, pc <- r1 + offs12
-            const int32_t r1Before = x[r1(ins)]; // r0 and r1 may be the same register.
-            x[r0(ins)] = nextPc;
-            nextPc = r1Before + offs12(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-            // Integer register-immediate instructions.
-
-        case Opcode::Addi: {
-            // r0 <- r1 + imm12
-            x[r0(ins)] = x[r1(ins)] + imm12(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Slti: {
-            // r0 <- (r1 < imm12) ? 1 : 0 (signed integer comparison)
-            const int32_t sr1 = static_cast<int32_t>(x[r1(ins)]);
-            const int32_t simm12 = static_cast<int32_t>(x[imm12(ins)]);
-            x[r0(ins)] = sr1 < simm12 ? 1 : 0;
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Sltiu: {
-            // r0 <- (r1 < imm12) ? 1 : 0 (unsigned integer comparison)
-            x[r0(ins)] = x[r1(ins)] < imm12(ins) ? 1 : 0;
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Xori: {
-            // r0 <- r1 ^ imm12
-            x[r0(ins)] = x[r1(ins)] ^ imm12(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Ori: {
-            // r0 <- r1 | imm12
-            x[r0(ins)] = x[r1(ins)] | imm12(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Andi: {
-            // r0 <- r1 & imm12
-            x[r0(ins)] = x[r1(ins)] & imm12(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-            // Load instructions.
-
-        case Opcode::Lb: {
-            // r0 <- sext(memory(r1 + imm12))
-            const uint32_t addr = r1(ins) + imm12(ins);
-            const int32_t signExtendedByte = static_cast<int8_t>(memory[addr]);
-            x[r0(ins)] = static_cast<uint32_t>(signExtendedByte);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Lh: {
-            // r0 <- sext(memory16(r1 + imm12))
-            const uint32_t addr = r1(ins) + imm12(ins);
-            const int32_t signExtendedHalfWord =
-                    static_cast<int16_t>(memory[addr] + (memory[addr + 1] << 8));
-            x[r0(ins)] = static_cast<uint32_t>(signExtendedHalfWord);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Lw: {
-            // r0 <- memory32(r1 + imm12)
-            const uint32_t addr = r1(ins) + imm12(ins);
-            const uint32_t word = memory[addr] | (memory[addr + 1] << 8) | (memory[addr + 2] << 16)
-                    | (memory[addr + 3] << 24);
-            x[r0(ins)] = word;
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Lbu: {
-            // r0 <- zext(memory(r1 + imm12))
-            const uint32_t addr = r1(ins) + imm12(ins);
-            x[r0(ins)] = memory[addr];
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Lhu: {
-            // r0 <- zext(memory16(r1 + imm12))
-            const uint32_t addr = r1(ins) + imm12(ins);
-            const uint32_t zeroExtendedHalfWord = memory[addr] | (memory[addr + 1] << 8);
-            x[r0(ins)] = zeroExtendedHalfWord;
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-            // Store instructions.
-
-        case Opcode::Sb: {
-            // memory(r0 + imm12) <- r1[7:0]
-            const uint32_t addr = r0(ins) + imm12(ins);
-            memory[addr] = r1(ins) & 0xff;
-            break;
-        }
-
-        case Opcode::Sh: {
-            // memory16(r0 + imm12) <- r1[15:0]
-            const uint32_t addr = r0(ins) + imm12(ins);
-            const uint32_t v = r1(ins);
-            memory[addr] = v & 0xff;
-            memory[addr + 1] = (v >> 8) & 0xff;
-            break;
-        }
-
-        case Opcode::Sw: {
-            // memory32(r0 + imm12) <- r1
-            const uint32_t addr = r0(ins) + imm12(ins);
-            const uint32_t v = r1(ins);
-            memory[addr] = v & 0xff;
-            memory[addr + 1] = (v >> 8) & 0xff;
-            memory[addr + 2] = (v >> 16) & 0xff;
-            memory[addr + 3] = (v >> 24) & 0xff;
-            break;
-        }
-
-            // Cache/memory instructions.
-
-        case Opcode::Fence: {
-            // Do nothing.
-            break;
-        }
-
-            // Misc.
-
-        case Opcode::Jal: {
-            // r0 <- pc + 4, pc <- pc + offs20
-            x[r0(ins)] = nextPc;
-            nextPc = pc + offs20(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Lui: {
-            // r0 <- uimm20
-            x[r0(ins)] = uimm20(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-        case Opcode::Auipc: {
-            // r0 <- pc + imm_u
-            x[r0(ins)] = pc + uimm20(ins);
-            x[0] = 0; // Ensure x0 is always zero.
-            break;
-        }
-
-            // Other instructions - would be RV32I pseudo-instructions.
-
         case Opcode::Call: {
             std::cout << std::format("fib({}) = {}\n", x[a1], x[a2]);
             break;
         }
 
         case Opcode::J: {
-            // pc <- pc + offs20
-            nextPc = pc + offs20(ins);
+            nextPc = pc + offs20(ins); // Branch.
             break;
         }
 
         case Opcode::Li: {
-            // r0 <- imm12
             x[r0(ins)] = imm12(ins);
             x[0] = 0; // Ensure x0 is always zero.
             break;
         }
 
+        case Opcode::Lui: {
+            x[r0(ins)] = uimm20(ins);
+            x[0] = 0; // Ensure x0 is always zero.
+            break;
+        }
+
         case Opcode::Mv: {
-            // r0 <- r1
             x[r0(ins)] = x[r1(ins)];
             x[0] = 0; // Ensure x0 is always zero.
             break;
@@ -721,6 +386,13 @@ public:
         current_ += 4; // 4 bytes per instruction.
     }
 
+    // Syscall instructions.
+
+    void Ecall()
+    {
+        Emit(encode::opc(Opcode::Ecall));
+    }
+
     void Add(uint32_t r0, uint32_t r1, uint32_t r2)
     {
         // add r0, r1, r2
@@ -840,8 +512,6 @@ std::vector<uint32_t> Assemble()
 // main:
     a.Li(s0, 0);                // li   s0, 0                   ; i = 0
     a.Li(s2, 2);                // li   s2, 2                   ; s2 = 2
-    a.Lui(a0, 1);               // lui  a0, %hi(format_str)
-    a.Addi(s1, a0, -548);       // addi s1, a0, %lo(format_str) ; s1 = the address of the printf format string
     a.Li(s3, 48);               // li   s3, 48                  ; s3 = 48
     a.Li(s4, 1);                // li   s4, 1                   ; s4 = 1
     Label fib = a.MakeLabel();
@@ -849,10 +519,9 @@ std::vector<uint32_t> Assemble()
 // print_loop:
     Label print_loop = a.MakeLabel();
     a.BindLabel(print_loop);
-    a.Mv(a0, s1);               // mv   a0, s1                  ; arg0 = the address of the printf format string
+    a.Li(a0, int32_t(Syscall::PrintFib)); // li   a0, PRINT_FIB           ; arg0 = the syscall number
     a.Mv(a1, s0);               // mv   a1, s0                  ; arg1 = i (arg2 contains current)
-    Label printf = a.MakeLabel();
-    a.Call(printf);             // call printf                  ; call printf
+    a.Ecall();                  // ecall                        ; invoke the PRINT_FIB syscall
     a.Addi(s0, s0, 1);          // addi s0, s0, 1               ; i = i + 1
     Label done = a.MakeLabel();
     a.Beq(s0, s3, done);        // beq  s0, s3, done            ; if i == 48 go to done
@@ -876,11 +545,11 @@ std::vector<uint32_t> Assemble()
     a.BindLabel(done);
     a.Li(a0, 0);                // li   a0, 0                   ; set the return value of main() to 0
 
-    // Emit an illegal instruction so that we have something to stop us.
-    a.Emit(0);
+    // Exit.
+    a.Li(a0, int32_t(Syscall::Exit));// li   a0, EXIT                ; arg0 = the syscall number
+    a.Li(a1, 0);                // li   a1, 0                   ; exit status 0
+    a.Ecall();                  // ecall                        ; invoke the PRINT_FIB syscall
 
-    // Bind `printf` so that returning the code doesn't error.
-    a.BindLabel(printf);
     // clang-format on
 
     return a.Code();
@@ -890,10 +559,8 @@ int main()
 {
     try
     {
-        constexpr size_t memSize = 1024;
-        std::vector<uint8_t> memory(memSize);
         auto code = Assemble();
-        Run(code.data(), memory.data());
+        Run(code.data());
     }
     catch (const std::exception& e)
     {
