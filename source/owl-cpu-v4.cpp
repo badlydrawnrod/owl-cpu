@@ -1,5 +1,3 @@
-// Introduce syscalls.
-
 #include <cstdint>
 #include <format>
 #include <iostream>
@@ -55,6 +53,7 @@ enum class Opcode : uint32_t
     Beq,
     Bltu,
     Call,
+    Ret,
     J,
     Li,
     Lui,
@@ -135,15 +134,15 @@ void Run(const uint32_t* code)
         switch (opcode)
         {
         case Opcode::Ecall: {
-            const Syscall syscall = Syscall(x[a0]);
+            const Syscall syscall = Syscall(x[a7]);
             switch (syscall)
             {
             case Syscall::Exit:
-                std::cout << std::format("Exiting with status {}\n", x[a1]);
+                std::cout << std::format("Exiting with status {}\n", x[a0]);
                 done = true;
                 break;
             case Syscall::PrintFib:
-                std::cout << std::format("fib({}) = {}\n", x[a1], x[a2]);
+                std::cout << std::format("fib({}) = {}\n", x[a0], x[a1]);
                 break;
             default:
                 done = true;
@@ -183,8 +182,14 @@ void Run(const uint32_t* code)
 
         case Opcode::Call: {
             // ra <- pc + 4, pc <- pc + offs20
-            x[ra] = nextPc;
-            nextPc = pc + offs20(ins);
+            x[ra] = nextPc;            // Save the return address in ra.
+            nextPc = pc + offs20(ins); // Make the call.
+            break;
+        }
+
+        case Opcode::Ret: {
+            // pc <- ra
+            nextPc = x[ra]; // Return to ra.
             break;
         }
 
@@ -476,6 +481,11 @@ public:
         Jump<Opcode::Call>(label);
     }
 
+    void Ret()
+    {
+        Emit(encode::opc(Opcode::Ret));
+    }
+
     void J(int32_t offs20)
     {
         Jump<Opcode::J>(offs20);
@@ -517,12 +527,23 @@ std::vector<uint32_t> Assemble()
     a.Li(s4, 1);                // li   s4, 1                   ; s4 = 1
     Label fib = a.MakeLabel();
     a.J(fib);                   // j    fib                     ; go to fib
+// exit:
+    Label exit = a.MakeLabel();
+    a.BindLabel(exit);
+    a.Li(a7, Syscall::Exit);    // li   a7, EXIT                ; a7 = the syscall number
+    a.Ecall();                  // ecall                        ; invoke EXIT and don't return
+// print_fib:
+    Label print_fib = a.MakeLabel();
+    a.BindLabel(print_fib);     
+    a.Li(a7, Syscall::PrintFib);// li   a7, PRINT_FIB           ; a7 = the syscall number
+    a.Ecall();                  // ecall                        ; invoke the PRINT_FIB syscall
+    a.Ret();                    // ret                          ; return to the caller
 // print_loop:
     Label print_loop = a.MakeLabel();
     a.BindLabel(print_loop);
-    a.Li(a0, Syscall::PrintFib);// li   a0, PRINT_FIB           ; arg0 = the syscall number
-    a.Mv(a1, s0);               // mv   a1, s0                  ; arg1 = i (arg2 contains current)
-    a.Ecall();                  // ecall                        ; invoke the PRINT_FIB syscall
+    a.Mv(a0, s0);               // mv   a0, s0                  ; arg0 = i
+    a.Mv(a1, a2);               // mv   a1, a2                  ; arg1 = current
+    a.Call(print_fib);          // call print_fib               ; call print_fib
     a.Addi(s0, s0, 1);          // addi s0, s0, 1               ; i = i + 1
     Label done = a.MakeLabel();
     a.Beq(s0, s3, done);        // beq  s0, s3, done            ; if i == 48 go to done
@@ -545,12 +566,7 @@ std::vector<uint32_t> Assemble()
 // done:
     a.BindLabel(done);
     a.Li(a0, 0);                // li   a0, 0                   ; set the return value of main() to 0
-
-    // Exit.
-    a.Li(a0, Syscall::Exit);    // li   a0, EXIT                ; arg0 = the syscall number
-    a.Li(a1, 0);                // li   a1, 0                   ; exit status 0
-    a.Ecall();                  // ecall                        ; invoke the PRINT_FIB syscall
-
+    a.Call(exit);               // call exit                    ; does not return
     // clang-format on
 
     return a.Code();
