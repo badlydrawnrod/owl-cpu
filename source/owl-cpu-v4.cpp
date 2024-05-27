@@ -61,6 +61,13 @@ enum class Opcode : uint32_t
     Mv
 };
 
+// System calls.
+enum Syscall
+{
+    Exit,
+    PrintFib
+};
+
 namespace decode
 {
     uint32_t r0(const uint32_t ins)
@@ -99,12 +106,6 @@ namespace decode
     }
 } // namespace decode
 
-enum class Syscall
-{
-    Exit,
-    PrintFib
-};
-
 void Run(const uint32_t* code)
 {
     using namespace decode;
@@ -134,7 +135,7 @@ void Run(const uint32_t* code)
         switch (opcode)
         {
         case Opcode::Ecall: {
-            const auto syscall = Syscall(x[a0]);
+            const Syscall syscall = Syscall(x[a0]);
             switch (syscall)
             {
             case Syscall::Exit:
@@ -181,7 +182,9 @@ void Run(const uint32_t* code)
         }
 
         case Opcode::Call: {
-            std::cout << std::format("fib({}) = {}\n", x[a1], x[a2]);
+            // ra <- pc + 4, pc <- pc + offs20
+            x[ra] = nextPc;
+            nextPc = pc + offs20(ins);
             break;
         }
 
@@ -386,8 +389,6 @@ public:
         current_ += 4; // 4 bytes per instruction.
     }
 
-    // Syscall instructions.
-
     void Ecall()
     {
         Emit(encode::opc(Opcode::Ecall));
@@ -519,7 +520,7 @@ std::vector<uint32_t> Assemble()
 // print_loop:
     Label print_loop = a.MakeLabel();
     a.BindLabel(print_loop);
-    a.Li(a0, int32_t(Syscall::PrintFib)); // li   a0, PRINT_FIB           ; arg0 = the syscall number
+    a.Li(a0, Syscall::PrintFib);// li   a0, PRINT_FIB           ; arg0 = the syscall number
     a.Mv(a1, s0);               // mv   a1, s0                  ; arg1 = i (arg2 contains current)
     a.Ecall();                  // ecall                        ; invoke the PRINT_FIB syscall
     a.Addi(s0, s0, 1);          // addi s0, s0, 1               ; i = i + 1
@@ -546,7 +547,7 @@ std::vector<uint32_t> Assemble()
     a.Li(a0, 0);                // li   a0, 0                   ; set the return value of main() to 0
 
     // Exit.
-    a.Li(a0, int32_t(Syscall::Exit));// li   a0, EXIT                ; arg0 = the syscall number
+    a.Li(a0, Syscall::Exit);    // li   a0, EXIT                ; arg0 = the syscall number
     a.Li(a1, 0);                // li   a1, 0                   ; exit status 0
     a.Ecall();                  // ecall                        ; invoke the PRINT_FIB syscall
 
