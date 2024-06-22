@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <array>
+#include <bit>
 #include <cstdint>
 #include <format>
 #include <iostream>
@@ -6,6 +9,10 @@
 #include <span>
 #include <string>
 #include <vector>
+
+// This code works on little-endian and big-endian platforms only.
+static_assert(std::endian::native == std::endian::little
+              || std::endian::native == std::endian::big);
 
 // Symbolic register names.
 enum
@@ -102,6 +109,24 @@ namespace decode
     }
 } // namespace decode
 
+uint32_t AsLE(uint32_t word)
+{
+    if constexpr (std::endian::native == std::endian::little)
+    {
+        // Nothing to do. We're on a little-endian platform, and Owl-2820 is little-endian.
+        return word;
+    }
+
+    if constexpr (std::endian::native == std::endian::big)
+    {
+        // We're on a big-endian platform so reverse the byte order as Owl-2820 is little-endian.
+        // The code may look like it takes lots of instructions, but MSVC, gcc,and clang are clever
+        // enough to figure out what is going on and will generate the equivalent of `bswap` (x86)
+        // or `rev` (ARM).
+        return std::rotr(word & 0x00ff00ff, 8) | (std::rotl(word, 8) & 0x00ff00ff);
+    }
+}
+
 void Run(std::span<uint32_t> code, std::span<uint8_t> memory)
 {
     using namespace decode;
@@ -125,7 +150,7 @@ void Run(std::span<uint32_t> code, std::span<uint8_t> memory)
         // Fetch a 32-bit word from memory at the address pointed to by the program counter.
         pc = nextPc;
         nextPc += wordSize;
-        const uint32_t ins = code[pc / wordSize];
+        const uint32_t ins = AsLE(code[pc / wordSize]);
 
         // Decode the word to extract the opcode.
         const Opcode opcode = Opcode(ins & 0x7f);
@@ -430,7 +455,7 @@ public:
 
     void Emit(uint32_t u)
     {
-        code_.push_back(u);
+        code_.push_back(AsLE(u));
         current_ += 4; // 4 bytes per instruction.
     }
 
