@@ -508,17 +508,17 @@ std::vector<uint32_t> Assemble()
     a.Li(s4, 1);                // li   s4, 1                   ; s4 = 1
     Label fib = a.MakeLabel();
     a.J(fib);                   // j    fib                     ; go to fib
-// printf:
-    Label printf = a.MakeLabel();
-    a.BindLabel(printf);
-    a.Ecall();                  // ecall                        ; invoke printf
+// print_fib:
+    Label print_fib = a.MakeLabel();
+    a.BindLabel(print_fib);
+    a.Ecall();                  // ecall                        ; invoke hard-coded print_fib
     a.Ret();                    // ret                          ; return to the caller
 // print_loop:
     Label print_loop = a.MakeLabel();
     a.BindLabel(print_loop);
     a.Mv(a0, s1);               // mv   a0, s1                  ; arg0 = the address of the printf format string
     a.Mv(a1, s0);               // mv   a1, s0                  ; arg1 = i (arg2 contains current)
-    a.Call(printf);             // call printf                  ; call printf
+    a.Call(print_fib);          // call print_fib               ; call print_fib
     a.Addi(s0, s0, 1);          // addi s0, s0, 1               ; i = i + 1
     Label done = a.MakeLabel();
     a.Beq(s0, s3, done);        // beq  s0, s3, done            ; if i == 48 go to done
@@ -544,7 +544,7 @@ std::vector<uint32_t> Assemble()
 
     // Emit an illegal instruction so that we have something to stop us.
     a.Emit(0);
-    
+
     // clang-format on
 
     return a.Code();
