@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -101,7 +102,7 @@ namespace decode
     }
 } // namespace decode
 
-void Run(const uint32_t* code, uint8_t* memory, uint32_t initialSp)
+void Run(std::span<uint32_t> code, std::span<uint8_t> memory)
 {
     using namespace decode;
 
@@ -112,8 +113,8 @@ void Run(const uint32_t* code, uint8_t* memory, uint32_t initialSp)
     // Set all the integer registers to zero.
     uint32_t x[32] = {}; // The integer registers.
 
-    // Set the stack pointer to the initial value passed in.
-    x[sp] = initialSp;
+    // Set the stack pointer to the end of memory.
+    x[sp] = uint32_t(memory.size());
 
     constexpr uint32_t wordSize = sizeof(uint32_t);
 
@@ -748,10 +749,15 @@ int main()
 {
     try
     {
-        constexpr size_t memSize = 1024;
         auto code = Assemble();
-        code.resize(memSize / sizeof(code[0]));
-        Run(code.data(), reinterpret_cast<uint8_t*>(code.data()), uint32_t(memSize));
+
+        constexpr size_t memorySizeInBytes = 4096;
+        code.resize(memorySizeInBytes / sizeof(code[0]));
+
+        auto rawMemory = reinterpret_cast<uint8_t*>(code.data());
+        std::span<uint8_t> memory = std::span(rawMemory, memorySizeInBytes);
+
+        Run(code, memory);
     }
     catch (const std::exception& e)
     {
