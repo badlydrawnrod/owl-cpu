@@ -312,8 +312,8 @@ class Assembler
     {
         offs12,
         offs20,
-        uimm20,
-        imm12
+        hi20,
+        lo12
     };
 
     struct Fixup
@@ -353,12 +353,12 @@ class Assembler
         {
             existing = (existing & 0x00000fff) | encode::offs20(offset);
         }
-        else if constexpr (type == FixupType::uimm20)
+        else if constexpr (type == FixupType::hi20)
         {
             // Assumes that the offset is pre-encoded as a uimm20.
             existing = (existing & 0x00000fff) | offset;
         }
-        else if constexpr (type == FixupType::imm12)
+        else if constexpr (type == FixupType::lo12)
         {
             existing = (existing & 0x000fffff) | encode::imm12(offset);
         }
@@ -394,15 +394,15 @@ public:
                     const auto offset = address - fixup.target;
                     ResolveFixup<FixupType::offs20>(fixup.target, offset);
                 }
-                else if (fixup.type == FixupType::uimm20)
+                else if (fixup.type == FixupType::hi20)
                 {
                     const auto upper20 = (address & 0xfffff000);
-                    ResolveFixup<FixupType::uimm20>(fixup.target, upper20);
+                    ResolveFixup<FixupType::hi20>(fixup.target, upper20);
                 }
-                else if (fixup.type == FixupType::imm12)
+                else if (fixup.type == FixupType::lo12)
                 {
                     const auto lower12 = (address & 0x00000fff);
-                    ResolveFixup<FixupType::imm12>(fixup.target, lower12);
+                    ResolveFixup<FixupType::lo12>(fixup.target, lower12);
                 }
             }
 
@@ -580,13 +580,13 @@ public:
         // %hi(label)
         if (const auto addr = AddressOf(label); addr.has_value())
         {
-            // The assumption here is that we're only doing this for Lui which expects to shift the
-            // uimm20 that we give to it.
+            // Assumes that we're only doing this for Lui which expects to shift the uimm20 that we
+            // give to it.
             return *addr >> 12;
         }
         else
         {
-            AddFixup<FixupType::uimm20>(label);
+            AddFixup<FixupType::hi20>(label);
             return 0;
         }
     }
@@ -596,13 +596,13 @@ public:
         // %lo(label)
         if (const auto addr = AddressOf(label); addr.has_value())
         {
-            // The assumption here is that we're only doing this for instructions that combine with
-            // Lui.
+            // Assumes that we're only doing this for instructions that combine with Lui when
+            // loading an absolute address.
             return *addr & 0xfff;
         }
         else
         {
-            AddFixup<FixupType::imm12>(label);
+            AddFixup<FixupType::lo12>(label);
             return 0;
         }
     }
