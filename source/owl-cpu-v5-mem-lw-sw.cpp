@@ -241,9 +241,15 @@ void Run(std::span<uint32_t> code, std::span<uint8_t> memory)
         case Opcode::Lw: {
             // r0 <- memory32(r1 + imm12)
             const uint32_t addr = x[r1(ins)] + imm12(ins);
-            const uint32_t v = memory[addr] | (memory[addr + 1] << 8) | (memory[addr + 2] << 16)
-                    | (memory[addr + 3] << 24);
-            x[r0(ins)] = v;
+            // Owl-2820 is permissive about unaligned memory accesses. This may not be the case for
+            // the host platform, so we do the equivalent of a memcpy from the VM's memory before
+            // trying to interpret the value. Most compilers will detect what we're doing and
+            // optimize it away.
+            uint32_t v;
+            std::ranges::copy_n(memory.data() + addr, sizeof(uint32_t),
+                                reinterpret_cast<uint8_t*>(&v));
+            // Owl-2820 is little-endian, so swap the byte order if necessary.
+            x[r0(ins)] = AsLE(v);
             x[0] = 0; // Ensure x0 is always zero.
             break;
         }
@@ -251,11 +257,13 @@ void Run(std::span<uint32_t> code, std::span<uint8_t> memory)
         case Opcode::Sw: {
             // memory32(r1 + imm12) <- r0
             const uint32_t addr = x[r1(ins)] + imm12(ins);
-            const uint32_t v = x[r0(ins)];
-            memory[addr] = v & 0xff;
-            memory[addr + 1] = (v >> 8) & 0xff;
-            memory[addr + 2] = (v >> 16) & 0xff;
-            memory[addr + 3] = (v >> 24) & 0xff;
+            // Owl-2820 is little-endian, so swap the byte order if necessary.
+            const uint32_t v = AsLE(x[r0(ins)]);
+            // Owl-2820 is permissive about unaligned memory accesses. This may not be the case for
+            // the host platform, so we do the equivalent of a memcpy when writing the value to the
+            // VM's memory. Most compilers will detect what we're doing and optimize it away.
+            std::ranges::copy_n(reinterpret_cast<const uint8_t*>(&v), sizeof(uint32_t),
+                                memory.data() + addr);
             break;
         }
 
