@@ -184,7 +184,7 @@ void Run(std::span<uint32_t> code, std::span<uint8_t> memory)
         switch (opcode)
         {
         case Opcode::Ecall: {
-            std::cout << std::format("fib({}) = {}\n", x[a1], x[a2]);
+            std::cout << std::format("fib({}) = {}\n", x[a0], x[a1]);
             break;
         }
 
@@ -652,14 +652,6 @@ public:
         }
     }
 
-    // TODO: implement String in the assembler.
-    void String(const std::string& s)
-    {
-        // .string(s)
-        Emit(encode::opc(Opcode::Illegal));
-        std::ignore = s;
-    }
-
     void Word(uint32_t word)
     {
         // .word(uimm32)
@@ -694,19 +686,13 @@ std::vector<uint32_t> Assemble()
     a.Lui(s1, a.Hi(lut));       // lui     s1, %hi(lut)
     a.Addi(s1, s1, a.Lo(lut));  // addi    s1, s1, %lo(lut)
 
-    // ; s3 = the address of the printf format string
-    Label format_str = a.MakeLabel();
-    a.Lui(s3, a.Hi(format_str));        // lui     s3, %hi(format_str)
-    a.Addi(s3, s3, a.Lo(format_str));   // addi    s3, s3, %lo(format_str)
-
     a.Li(s0, 0);                // li      s0, 0                   ; i = 0
     a.Li(s2, 48);               // li      s2, 48                  ; s2 = 48
 // print_loop:
     Label print_loop = a.MakeLabel();
     a.BindLabel(print_loop);
-    a.Lw(a2, 0, s1);            // lw      a2, 0(s1)               ; arg2 = *s1
-    a.Mv(a1, s0);               // mv      a1, s0                  ; arg1 = i
-    a.Mv(a0, a3);               // mv      a0, s3                  ; arg0 = the address of the printf format string
+    a.Lw(a1, 0, s1);            // lw      a1, 0(s1)               ; arg1 = *s1
+    a.Mv(a0, s0);               // mv      a0, s0                  ; arg0 = i
     a.Addi(s0, s0, 1);          // addi    s0, s0, 1               ; i++
     Label print_fib = a.MakeLabel();
     a.Call(print_fib);          // call    print_fib
@@ -729,10 +715,6 @@ std::vector<uint32_t> Assemble()
     a.BindLabel(print_fib);
     a.Ecall();                  // ecall                           ; invoke hard-coded print_fib
     a.Ret();                    // ret                             ; return from print_fib
-
-// format_str:
-    a.BindLabel(format_str);
-    a.String("fib(%u) = %u\n"); // .string "fib(%u) = %u\n"
 
 // lut:
     a.BindLabel(lut);
