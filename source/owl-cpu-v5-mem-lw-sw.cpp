@@ -127,20 +127,20 @@ uint32_t AsLE(uint32_t word)
     }
 }
 
-uint32_t ReadLE32(std::span<uint8_t> memory, uint32_t addr)
+uint32_t ReadLE32(std::span<std::byte> memory, uint32_t addr)
 {
     // Owl-2820 is permissive about unaligned memory accesses. This may not be the case for
     // the host platform, so we do the equivalent of a memcpy from the VM's memory before
     // trying to interpret the value. Most compilers will detect what we're doing and
     // optimize it away.
     uint32_t v;
-    std::ranges::copy_n(memory.data() + addr, sizeof(uint32_t), reinterpret_cast<uint8_t*>(&v));
+    std::ranges::copy_n(memory.data() + addr, sizeof(uint32_t), reinterpret_cast<std::byte*>(&v));
 
     // Owl-2820 is little-endian, so swap the byte order if necessary.
     return AsLE(v);
 }
 
-void WriteLE32(std::span<uint8_t> memory, uint32_t addr, uint32_t word)
+void WriteLE32(std::span<std::byte> memory, uint32_t addr, uint32_t word)
 {
     // Owl-2820 is little-endian, so swap the byte order if necessary.
     const uint32_t v = AsLE(word);
@@ -148,13 +148,16 @@ void WriteLE32(std::span<uint8_t> memory, uint32_t addr, uint32_t word)
     // Owl-2820 is permissive about unaligned memory accesses. This may not be the case for
     // the host platform, so we do the equivalent of a memcpy when writing the value to the
     // VM's memory. Most compilers will detect what we're doing and optimize it away.
-    std::ranges::copy_n(reinterpret_cast<const uint8_t*>(&v), sizeof(uint32_t),
+    std::ranges::copy_n(reinterpret_cast<const std::byte*>(&v), sizeof(uint32_t),
                         memory.data() + addr);
 }
 
-void Run(std::span<uint32_t> code, std::span<uint8_t> memory)
+void Run(std::span<uint32_t> code)
 {
     using namespace decode;
+
+    // Get a byte-addressable view of the code, as it's really more of a system image than code alone.
+    auto memory = std::as_writable_bytes(code);
 
     // Set pc and nextPc to their initial values.
     uint32_t pc = 0;     // The program counter.
@@ -780,10 +783,7 @@ int main()
         constexpr size_t memorySizeInBytes = 4096;
         code.resize(memorySizeInBytes / sizeof(code[0]));
 
-        auto rawMemory = reinterpret_cast<uint8_t*>(code.data());
-        std::span<uint8_t> memory = std::span(rawMemory, memorySizeInBytes);
-
-        Run(code, memory);
+        Run(code);
     }
     catch (const std::exception& e)
     {
