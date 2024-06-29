@@ -59,7 +59,6 @@ enum class Opcode : uint32_t
     Add,
     Addi,
     Beq,
-    Bne,
     Bltu,
     Call,
     Ret,
@@ -206,15 +205,6 @@ void Run(std::span<uint32_t> image)
         case Opcode::Beq: {
             // pc <- pc + ((r0 == r1) ? offs12 : 4)
             if (x[r0(ins)] == x[r1(ins)])
-            {
-                nextPc = pc + offs12(ins); // Take the branch.
-            }
-            break;
-        }
-
-        case Opcode::Bne: {
-            // pc <- pc + ((r0 != r1) ? offs12 : 4)
-            if (x[r0(ins)] != x[r1(ins)])
             {
                 nextPc = pc + offs12(ins); // Take the branch.
             }
@@ -528,16 +518,6 @@ public:
         Branch<Opcode::Beq>(r0, r1, label);
     }
 
-    void Bne(uint32_t r0, uint32_t r1, int32_t offs12)
-    {
-        Branch<Opcode::Bne>(r0, r1, offs12);
-    }
-
-    void Bne(uint32_t r0, uint32_t r1, Label label)
-    {
-        Branch<Opcode::Bne>(r0, r1, label);
-    }
-
     void Bltu(uint32_t r0, uint32_t r1, int32_t offs12)
     {
         Branch<Opcode::Bltu>(r0, r1, offs12);
@@ -700,7 +680,7 @@ std::vector<uint32_t> Assemble()
     Label print_fib = a.MakeLabel();
     a.Call(print_fib);          // call    print_fib
     a.Addi(s1, s1, 4);          // addi    s1, s1, 4               ; bump s1 to the next address in the lookup table
-    a.Bne(s0, s2, print_loop);  // bne     s0, s2, print_loop      ; if i != 48 go to print_loop
+    a.Bltu(s0, s2, print_loop); // bltu    s0, s2, print_loop      ; if i < 48 go to print_loop
         
     // ; restore the return address register ra and registers s0 - s3 from the stack
     a.Lw(ra, 28, sp);           // lw      ra, 28(sp)
