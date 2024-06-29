@@ -152,12 +152,12 @@ void WriteLE32(std::span<std::byte> memory, uint32_t addr, uint32_t word)
                         memory.data() + addr);
 }
 
-void Run(std::span<uint32_t> code)
+void Run(std::span<uint32_t> image)
 {
     using namespace decode;
 
-    // Get a byte-addressable view of the code, as it's really more of a system image than code alone.
-    auto memory = std::as_writable_bytes(code);
+    // Get a byte-addressable view of the image for memory accesses.
+    auto memory = std::as_writable_bytes(image);
 
     // Set pc and nextPc to their initial values.
     uint32_t pc = 0;     // The program counter.
@@ -175,10 +175,10 @@ void Run(std::span<uint32_t> code)
 
     while (!done)
     {
-        // Fetch a 32-bit word from memory at the address pointed to by the program counter.
+        // Fetch a 32-bit word from the address pointed to by the program counter.
         pc = nextPc;
         nextPc += wordSize;
-        const uint32_t ins = AsLE(code[pc / wordSize]);
+        const uint32_t ins = AsLE(image[pc / wordSize]);
 
         // Decode the word to extract the opcode.
         const Opcode opcode = Opcode(ins & 0x7f);
@@ -778,12 +778,13 @@ int main()
 {
     try
     {
+        constexpr size_t memorySize = 4096;
+        std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
+
         auto code = Assemble();
+        std::ranges::copy(code, image.begin());
 
-        constexpr size_t memorySizeInBytes = 4096;
-        code.resize(memorySizeInBytes / sizeof(code[0]));
-
-        Run(code);
+        Run(image);
     }
     catch (const std::exception& e)
     {
