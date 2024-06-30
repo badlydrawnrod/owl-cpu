@@ -122,6 +122,17 @@ uint32_t AsLE(uint32_t word)
         // The code may look like it takes lots of instructions, but MSVC, gcc,and clang are clever
         // enough to figure out what is going on and will generate the equivalent of `bswap` (x86)
         // or `rev` (ARM).
+        //
+        // std::rotr(word & 00ff00ff, 8)
+        //      12345678 & 00ff00ff             == 00340078
+        //      00340078 rotr 8                 == 78004500
+        //
+        // std::rotl(word, 8) & 00ff00ff
+        //      12345678 rotl 8                 == 34567812
+        //      34567812 & 00ff00ff             == 00560012
+        //
+        // 78004500 | 00560012                  == 78563412
+        //
         return std::rotr(word & 0x00ff00ff, 8) | (std::rotl(word, 8) & 0x00ff00ff);
     }
 }
