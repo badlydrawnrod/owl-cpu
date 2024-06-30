@@ -126,7 +126,7 @@ uint32_t AsLE(uint32_t word)
     }
 }
 
-uint32_t ReadLE32(std::span<std::byte> memory, uint32_t addr)
+uint32_t Read32(std::span<std::byte> memory, uint32_t addr)
 {
     // Owl-2820 is permissive about unaligned memory accesses. This may not be the case for
     // the host platform, so we do the equivalent of a memcpy from the VM's memory before
@@ -139,7 +139,7 @@ uint32_t ReadLE32(std::span<std::byte> memory, uint32_t addr)
     return AsLE(v);
 }
 
-void WriteLE32(std::span<std::byte> memory, uint32_t addr, uint32_t word)
+void Write32(std::span<std::byte> memory, uint32_t addr, uint32_t word)
 {
     // Owl-2820 is little-endian, so swap the byte order if necessary.
     const uint32_t v = AsLE(word);
@@ -259,7 +259,7 @@ void Run(std::span<uint32_t> image)
         case Opcode::Lw: {
             // r0 <- memory32(r1 + imm12)
             const uint32_t addr = x[r1(ins)] + imm12(ins);
-            x[r0(ins)] = ReadLE32(memory, addr);
+            x[r0(ins)] = Read32(memory, addr);
             x[0] = 0; // Ensure x0 is always zero.
             break;
         }
@@ -267,7 +267,7 @@ void Run(std::span<uint32_t> image)
         case Opcode::Sw: {
             // memory32(r1 + imm12) <- r0
             const uint32_t addr = x[r1(ins)] + imm12(ins);
-            WriteLE32(memory, addr, x[r0(ins)]);
+            Write32(memory, addr, x[r0(ins)]);
             break;
         }
 
