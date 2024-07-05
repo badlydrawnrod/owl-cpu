@@ -237,6 +237,9 @@ void Run(std::span<uint32_t> image)
 {
     using namespace decode;
 
+    // Get a read-only, word addressable view of the image for fetching instructions.
+    const auto code = image;
+
     // Get a byte-addressable view of the image for memory accesses.
     auto memory = std::as_writable_bytes(image);
 
@@ -259,7 +262,7 @@ void Run(std::span<uint32_t> image)
         // Fetch a 32-bit word from the address pointed to by the program counter.
         pc = nextPc;
         nextPc += wordSize;
-        const uint32_t ins = AsLE(image[pc / wordSize]);
+        const uint32_t ins = AsLE(code[pc / wordSize]);
 
         // Decode the word to extract the opcode.
         const Opcode opcode = Opcode(ins & 0x7f);
@@ -929,9 +932,11 @@ int main()
 {
     try
     {
+        // Create a 4K memory image.
         constexpr size_t memorySize = 4096;
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
+        // Assemble our program and copy it to the start of the memory image.
         auto code = Assemble();
         std::ranges::copy(code, image.begin());
 
