@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <concepts>
 #include <cstdint>
 #include <filesystem>
 #include <format>
@@ -286,11 +287,11 @@ enum Syscall
 class OwlCpu
 {
 private:
-    uint32_t pc = 0;     // The program counter.
-    uint32_t nextPc = 0; // The address of the next instruction.
-    uint32_t x[32] = {}; // The integer registers.
-    bool done = false;
-    std::span<std::byte> memory;
+    uint32_t pc = 0;             // The program counter.
+    uint32_t nextPc = 0;         // The address of the next instruction.
+    uint32_t x[32] = {};         // The integer registers.
+    bool done = false;           // Are we there yet?
+    std::span<std::byte> memory; // TODO: not at all safe!!!
 
 public:
     void Run(std::span<uint32_t> image);
