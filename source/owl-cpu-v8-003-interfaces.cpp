@@ -543,7 +543,59 @@ private:
     std::span<std::byte> memory; // TODO: not at all safe!!!
 
 public:
-    void Run(std::span<uint32_t> image);
+    void Initialize(std::span<uint32_t> image)
+    {
+        // Get a byte-addressable view of the image for memory accesses.
+        memory = std::as_writable_bytes(image);
+
+        // Set pc and nextPc to their initial values.
+        pc = 0;     // The program counter.
+        nextPc = 0; // The address of the next instruction.
+
+        // Set all the integer registers to zero.
+        x[32] = {}; // The integer registers.
+
+        // Set the stack pointer to the end of memory.
+        x[sp] = uint32_t(memory.size());
+    }
+
+    void Run(std::span<uint32_t> image)
+    {
+        Initialize(image);
+
+        // Get a read-only, word addressable view of the image for fetching instructions.
+        const auto code = image;
+        constexpr uint32_t wordSize = sizeof(uint32_t);
+
+        done = false;
+        while (!done)
+        {
+            // Fetch a 32-bit word from the address pointed to by the program counter.
+            pc = nextPc;
+            nextPc += wordSize;
+            const uint32_t ins = AsLE(code[pc / wordSize]);
+            DispatchOwl(*this, ins);
+        }
+    }
+
+    void RunRv32i(std::span<uint32_t> image)
+    {
+        Initialize(image);
+
+        // Get a read-only, word addressable view of the image for fetching instructions.
+        const auto code = image;
+        constexpr uint32_t wordSize = sizeof(uint32_t);
+
+        done = false;
+        while (!done)
+        {
+            // Fetch a 32-bit word from the address pointed to by the program counter.
+            pc = nextPc;
+            nextPc += wordSize;
+            const uint32_t ins = AsLE(code[pc / wordSize]);
+            DispatchRv32i(*this, ins);
+        }
+    }
 
     // System instructions.
 
@@ -974,38 +1026,6 @@ public:
         done = true;
     }
 };
-
-void OwlCpu::Run(std::span<uint32_t> image)
-{
-    // Get a read-only, word addressable view of the image for fetching instructions.
-    const auto code = image;
-
-    // Get a byte-addressable view of the image for memory accesses.
-    memory = std::as_writable_bytes(image);
-
-    // Set pc and nextPc to their initial values.
-    pc = 0;     // The program counter.
-    nextPc = 0; // The address of the next instruction.
-
-    // Set all the integer registers to zero.
-    x[32] = {}; // The integer registers.
-
-    // Set the stack pointer to the end of memory.
-    x[sp] = uint32_t(memory.size());
-
-    constexpr uint32_t wordSize = sizeof(uint32_t);
-
-    done = false;
-
-    while (!done)
-    {
-        // Fetch a 32-bit word from the address pointed to by the program counter.
-        pc = nextPc;
-        nextPc += wordSize;
-        const uint32_t ins = AsLE(code[pc / wordSize]);
-        DispatchOwl(*this, ins);
-    }
-}
 
 static_assert(OwlHandler<OwlCpu>);
 
@@ -1659,13 +1679,16 @@ int main()
         ifs.read(reinterpret_cast<char*>(buffer.data()), sizeBytes);
         ifs.close();
 
-        // Transcode it to Owl-2820 and copy the result into our VM image.
+        // Run the RV32I image directly.
+        std::ranges::copy(buffer, image.begin());
+        OwlCpu rv32iCpu;
+        rv32iCpu.RunRv32i(image);
+
+        // Transcode it to Owl-2820 then run it.
         auto code = Rv32iToOwl(buffer);
         std::ranges::copy(code, image.begin());
-
-        // Create a VM and run the image on it.
-        OwlCpu cpu;
-        cpu.Run(image);
+        OwlCpu owlCpu;
+        owlCpu.Run(image);
     }
     catch (const std::exception& e)
     {
