@@ -559,7 +559,8 @@ public:
         x[sp] = uint32_t(memory.size());
     }
 
-    void Run(std::span<uint32_t> image)
+    template<typename DispatchFn>
+    void Run(DispatchFn dispatchFn, std::span<uint32_t> image)
     {
         Initialize(image);
 
@@ -574,27 +575,18 @@ public:
             pc = nextPc;
             nextPc += wordSize;
             const uint32_t ins = AsLE(code[pc / wordSize]);
-            DispatchOwl(*this, ins);
+            dispatchFn(*this, ins);
         }
+    }
+
+    void Run(std::span<uint32_t> image)
+    {
+        Run(DispatchOwl<OwlCpu>, image);
     }
 
     void RunRv32i(std::span<uint32_t> image)
     {
-        Initialize(image);
-
-        // Get a read-only, word addressable view of the image for fetching instructions.
-        const auto code = image;
-        constexpr uint32_t wordSize = sizeof(uint32_t);
-
-        done = false;
-        while (!done)
-        {
-            // Fetch a 32-bit word from the address pointed to by the program counter.
-            pc = nextPc;
-            nextPc += wordSize;
-            const uint32_t ins = AsLE(code[pc / wordSize]);
-            DispatchRv32i(*this, ins);
-        }
+        Run(DispatchRv32i<OwlCpu>, image);
     }
 
     // System instructions.
