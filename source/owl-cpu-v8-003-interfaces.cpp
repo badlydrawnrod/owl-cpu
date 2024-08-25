@@ -543,7 +543,8 @@ private:
     std::span<std::byte> memory; // TODO: not at all safe!!!
 
 public:
-    void Initialize(std::span<uint32_t> image)
+    template<typename DispatchFn>
+    void Run(DispatchFn dispatchFn, std::span<uint32_t> image)
     {
         // Get a byte-addressable view of the image for memory accesses.
         memory = std::as_writable_bytes(image);
@@ -557,12 +558,6 @@ public:
 
         // Set the stack pointer to the end of memory.
         x[sp] = uint32_t(memory.size());
-    }
-
-    template<typename DispatchFn>
-    void Run(DispatchFn dispatchFn, std::span<uint32_t> image)
-    {
-        Initialize(image);
 
         // Get a read-only, word addressable view of the image for fetching instructions.
         const auto code = image;
@@ -579,7 +574,7 @@ public:
         }
     }
 
-    void Run(std::span<uint32_t> image)
+    void RunOwl(std::span<uint32_t> image)
     {
         Run(DispatchOwl<OwlCpu>, image);
     }
@@ -1680,7 +1675,7 @@ int main()
         auto code = Rv32iToOwl(buffer);
         std::ranges::copy(code, image.begin());
         OwlCpu owlCpu;
-        owlCpu.Run(image);
+        owlCpu.RunOwl(image);
     }
     catch (const std::exception& e)
     {
