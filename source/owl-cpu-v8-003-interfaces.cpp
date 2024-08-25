@@ -533,6 +533,9 @@ void DispatchRv32i(OwlHandler auto& handler, uint32_t code)
     return handler.Illegal(code);
 }
 
+template<typename Fn, typename Handler>
+concept DispatchFnT = OwlHandler<Handler> && std::invocable<Fn, Handler&, uint32_t>;
+
 class OwlCpu
 {
 private:
@@ -543,7 +546,7 @@ private:
     std::span<std::byte> memory; // TODO: not at all safe!!!
 
 public:
-    template<typename DispatchFn>
+    template<DispatchFnT<OwlCpu> DispatchFn>
     void Run(DispatchFn dispatchFn, std::span<uint32_t> image)
     {
         // Get a byte-addressable view of the image for memory accesses.
