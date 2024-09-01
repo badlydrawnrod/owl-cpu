@@ -282,21 +282,32 @@ enum Syscall
 
 class OwlCpu
 {
-public:                          // TODO: obviously not forever.
     uint32_t pc = 0;             // The program counter.
     uint32_t nextPc = 0;         // The address of the next instruction.
     uint32_t x[32] = {};         // The integer registers.
     bool done = false;           // Are we there yet?
-    std::span<std::byte> memory; // TODO: not at all safe!!!
+    std::span<uint32_t> code;    // Non-owning.
+    std::span<std::byte> memory; // Non-owning.
 
 public:
-    OwlCpu(std::span<std::byte> memory) : memory{memory}
+    OwlCpu(std::span<std::uint32_t> image) : code{image}, memory{std::as_writable_bytes(image)}
     {
         // Set the stack pointer to the end of memory.
         x[sp] = uint32_t(memory.size());
     }
 
-    void Run(std::span<uint32_t> image);
+    bool Done() const
+    {
+        return done;
+    }
+
+    uint32_t Fetch()
+    {
+        constexpr uint32_t wordSize = sizeof(uint32_t);
+        pc = nextPc;
+        nextPc += wordSize;
+        return AsLE(code[pc / wordSize]);
+    }
 
     // System instructions.
 
@@ -789,25 +800,10 @@ void DispatchOwl(OwlCpu& cpu, uint32_t ins)
 
 void Run(std::span<uint32_t> image)
 {
-    using namespace decode;
-
-    // Get a read-only, word addressable view of the image for fetching instructions.
-    const auto code = image;
-
-    // Get a byte-addressable view of the image for memory accesses.
-    auto memory = std::as_writable_bytes(image);
-    OwlCpu cpu(memory);
-
-    constexpr uint32_t wordSize = sizeof(uint32_t);
-
-    while (!cpu.done)
+    OwlCpu cpu(image);
+    while (!cpu.Done())
     {
-        // TODO: we can write this as "Fetch()".
-        // Fetch a 32-bit word from the address pointed to by the program counter.
-        cpu.pc = cpu.nextPc;
-        cpu.nextPc += wordSize;
-        const uint32_t ins = AsLE(code[cpu.pc / wordSize]);
-
+        const uint32_t ins = cpu.Fetch();
         DispatchOwl(cpu, ins);
     }
 }
