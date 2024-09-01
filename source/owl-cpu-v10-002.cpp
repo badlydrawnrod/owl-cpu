@@ -1676,8 +1676,9 @@ int main()
 
         auto rv32iImage = LoadRv32iImage();
 
-        // Run it directly.
-        RunRv32i(rv32iImage);
+        // Copy the result into our VM image to run it directly.
+        std::ranges::copy(rv32iImage, image.begin());
+        RunRv32i(image);
 
         // Transcode it to Owl-2820 and copy the result into our VM image.
         auto owlImage = Rv32iToOwl(rv32iImage);

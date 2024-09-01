@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <map>
@@ -275,6 +274,70 @@ void Write32(Memory memory, uint32_t addr, uint32_t word)
                         memory.data() + addr);
 }
 
+template<typename T>
+concept OwlHandler =
+        requires(T t, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t shift, int32_t offs12,
+                 int32_t imm12, int32_t offs20, uint32_t uimm20, uint32_t ins) {
+            //
+            { t.Ecall() } -> std::same_as<void>;
+            { t.Ebreak() } -> std::same_as<void>;
+            //
+            { t.Add(r0, r1, r2) } -> std::same_as<void>;
+            { t.Sub(r0, r1, r2) } -> std::same_as<void>;
+            { t.Sll(r0, r1, r2) } -> std::same_as<void>;
+            { t.Slt(r0, r1, r2) } -> std::same_as<void>;
+            { t.Sltu(r0, r1, r2) } -> std::same_as<void>;
+            { t.Xor(r0, r1, r2) } -> std::same_as<void>;
+            { t.Srl(r0, r1, r2) } -> std::same_as<void>;
+            { t.Sra(r0, r1, r2) } -> std::same_as<void>;
+            { t.Or(r0, r1, r2) } -> std::same_as<void>;
+            { t.And(r0, r1, r2) } -> std::same_as<void>;
+            //
+            { t.Slli(r0, r1, shift) } -> std::same_as<void>;
+            { t.Srli(r0, r1, shift) } -> std::same_as<void>;
+            { t.Srai(r0, r1, shift) } -> std::same_as<void>;
+            //
+            { t.Beq(r0, r1, offs12) } -> std::same_as<void>;
+            { t.Bne(r0, r1, offs12) } -> std::same_as<void>;
+            { t.Blt(r0, r1, offs12) } -> std::same_as<void>;
+            { t.Bge(r0, r1, offs12) } -> std::same_as<void>;
+            { t.Bltu(r0, r1, offs12) } -> std::same_as<void>;
+            { t.Bgeu(r0, r1, offs12) } -> std::same_as<void>;
+            //
+            { t.Addi(r0, r1, imm12) } -> std::same_as<void>;
+            { t.Slti(r0, r1, imm12) } -> std::same_as<void>;
+            { t.Sltiu(r0, r1, imm12) } -> std::same_as<void>;
+            { t.Xori(r0, r1, imm12) } -> std::same_as<void>;
+            { t.Ori(r0, r1, imm12) } -> std::same_as<void>;
+            { t.Andi(r0, r1, imm12) } -> std::same_as<void>;
+            //
+            { t.Lb(r0, imm12, r1) } -> std::same_as<void>;
+            { t.Lbu(r0, imm12, r1) } -> std::same_as<void>;
+            { t.Lh(r0, imm12, r1) } -> std::same_as<void>;
+            { t.Lhu(r0, imm12, r1) } -> std::same_as<void>;
+            { t.Lw(r0, imm12, r1) } -> std::same_as<void>;
+            //
+            { t.Sb(r0, imm12, r1) } -> std::same_as<void>;
+            { t.Sh(r0, imm12, r1) } -> std::same_as<void>;
+            { t.Sw(r0, imm12, r1) } -> std::same_as<void>;
+            //
+            { t.Fence() } -> std::same_as<void>;
+            //
+            { t.Jalr(r0, offs12, r1) } -> std::same_as<void>;
+            { t.Jal(r0, offs20) } -> std::same_as<void>;
+            //
+            { t.Lui(r0, uimm20) } -> std::same_as<void>;
+            { t.Auipc(r0, uimm20) } -> std::same_as<void>;
+            //
+            { t.J(offs20) } -> std::same_as<void>;
+            { t.Call(offs20) } -> std::same_as<void>;
+            { t.Ret() } -> std::same_as<void>;
+            { t.Li(r0, imm12) } -> std::same_as<void>;
+            { t.Mv(r0, r1) } -> std::same_as<void>;
+            //
+            { t.Illegal(ins) } -> std::same_as<void>;
+        };
+
 enum Syscall
 {
     Exit,
@@ -318,12 +381,12 @@ public:
         switch (syscall)
         {
         case Syscall::Exit:
-            // std::cout << "Exiting with status " << x[a0] << '\n';
+            std::cout << "Exiting with status " << x[a0] << '\n';
             done = true;
             break;
 
         case Syscall::PrintFib:
-            // std::cout << "fib(" << x[a0] << ") = " << x[a1] << '\n';
+            std::cout << "fib(" << x[a0] << ") = " << x[a1] << '\n';
             break;
         }
     }
@@ -738,7 +801,9 @@ public:
     }
 };
 
-void DispatchOwl(OwlCpu& cpu, uint32_t ins)
+static_assert(OwlHandler<OwlCpu>);
+
+void DispatchOwl(OwlHandler auto& cpu, uint32_t ins)
 {
     using namespace decode;
 
@@ -1498,7 +1563,9 @@ public:
     }
 };
 
-void DispatchRv32i(OwlCpu& a, uint32_t code)
+static_assert(OwlHandler<Assembler>);
+
+void DispatchRv32i(OwlHandler auto& a, uint32_t code)
 {
     DecodeRv32 rv(code);
 
@@ -1565,69 +1632,12 @@ void RunRv32i(std::span<uint32_t> image)
     }
 }
 
-void Transcode(Assembler& a, uint32_t code)
-{
-    DecodeRv32 rv(code);
-
-    // clang-format off
-    switch (code) {
-        case 0x00000073: return a.Ecall();
-        case 0x00100073: return a.Ebreak();
-    }
-    switch (code & 0xfe00707f) {
-        case 0x00000033: return a.Add(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x40000033: return a.Sub(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00001033: return a.Sll(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00002033: return a.Slt(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00003033: return a.Sltu(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00004033: return a.Xor(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00005033: return a.Srl(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x40005033: return a.Sra(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00006033: return a.Or(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00007033: return a.And(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00001013: return a.Slli(rv.Rd(), rv.Rs1(), rv.Shamtw());
-        case 0x00005013: return a.Srli(rv.Rd(), rv.Rs1(), rv.Shamtw());
-        case 0x40005013: return a.Srai(rv.Rd(), rv.Rs1(), rv.Shamtw());
-    }
-    switch (code & 0x0000707f) {
-        case 0x00000063: return a.Beq(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00001063: return a.Bne(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00004063: return a.Blt(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00005063: return a.Bge(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00006063: return a.Bltu(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00007063: return a.Bgeu(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00000067: return a.Jalr(rv.Rd(), rv.Iimmediate(),rv.Rs1()); // changed order
-        case 0x00000013: return a.Addi(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00002013: return a.Slti(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00003013: return a.Sltiu(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00004013: return a.Xori(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00006013: return a.Ori(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00007013: return a.Andi(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00000003: return a.Lb(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00001003: return a.Lh(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00002003: return a.Lw(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00004003: return a.Lbu(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00005003: return a.Lhu(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00000023: return a.Sb(rv.Rs1(), rv.Simmediate(), rv.Rs2()); // changed order
-        case 0x00001023: return a.Sh(rv.Rs1(), rv.Simmediate(), rv.Rs2()); // changed order
-        case 0x00002023: return a.Sw(rv.Rs1(), rv.Simmediate(), rv.Rs2()); // changed order
-        case 0x0000000f: return a.Fence();
-    }
-    switch (code & 0x0000007f) {
-        case 0x0000006f: return a.Jal(rv.Rd(), rv.Jimmediate());
-        case 0x00000037: return a.Lui(rv.Rd(), rv.Uimmediate());
-        case 0x00000017: return a.Auipc(rv.Rd(), rv.Uimmediate());
-    }
-    // clang-format on
-    return a.Illegal(code);
-}
-
 std::vector<uint32_t> Rv32iToOwl(std::span<uint32_t> image)
 {
     Assembler a;
     for (auto code : image)
     {
-        Transcode(a, code);
+        DispatchRv32i(a, code);
     }
     return a.Code();
 }
@@ -1677,37 +1687,15 @@ int main()
 
         auto rv32iImage = LoadRv32iImage();
 
-        // Crude microbenchmark.
-        constexpr int attempts = 100000;
-
         // Copy the result into our VM image to run it directly.
         std::ranges::copy(rv32iImage, image.begin());
-        const auto startRv32i{std::chrono::steady_clock::now()};
-        for (int i = 0; i < attempts; i++)
-        {
-            RunRv32i(image);
-        }
-        const auto endRv32i{std::chrono::steady_clock::now()};
+        RunRv32i(image);
 
         // Transcode it to Owl-2820 and copy the result into our VM image.
         auto owlImage = Rv32iToOwl(rv32iImage);
         std::ranges::copy(owlImage, image.begin());
 
-        // Run it as Owl-2820.
-        const auto startOwl{std::chrono::steady_clock::now()};
-        for (int i = 0; i < attempts; i++)
-        {
-            Run(image);
-        }
-        const auto endOwl{std::chrono::steady_clock::now()};
-
-        const std::chrono::duration<double> elapsedRv32i{endRv32i - startRv32i};
-        const std::chrono::duration<double> elapsedOwl{endOwl - startOwl};
-
-        std::cout << "Elapsed Rv32i: " << elapsedRv32i << '\n';
-        std::cout << "Elapsed   Owl: " << elapsedOwl << '\n';
-        std::cout << "rv32i/owl: " << (elapsedRv32i / elapsedOwl) << '\n';
-        std::cout << "owl/rv32i: " << (elapsedOwl / elapsedRv32i) << '\n';
+        Run(image);
     }
     catch (const std::exception& e)
     {
