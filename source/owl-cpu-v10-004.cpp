@@ -1711,7 +1711,18 @@ public:
     // addi r0, r1, imm12
     void Addi(uint32_t r0, uint32_t r1, int32_t imm12)
     {
-        std::cout << std::format("addi {}, {}, {}\n", regnames[r0], regnames[r1], imm12);
+        if (r1 == 0)
+        {
+            std::cout << std::format("li {}, {}\n", regnames[r0], imm12);
+        }
+        else if (imm12 == 0)
+        {
+            std::cout << std::format("mv {}, {}\n", regnames[r0], regnames[r1]);
+        }
+        else
+        {
+            std::cout << std::format("addi {}, {}, {}\n", regnames[r0], regnames[r1], imm12);
+        }
     }
 
     // slti r0, r1, imm12
@@ -1808,13 +1819,27 @@ public:
     // jalr r0, offs12(r1)
     void Jalr(uint32_t r0, int32_t offs12, uint32_t r1)
     {
-        std::cout << std::format("jalr {}, {}({})\n", regnames[r0], offs12, regnames[r1]);
+        if (r0 == zero && r1 == ra && offs12 == 0)
+        {
+            std::cout << "ret\n";
+        }
+        else
+        {
+            std::cout << std::format("jalr {}, {}({})\n", regnames[r0], offs12, regnames[r1]);
+        }
     }
 
     // jal r0, offs20
     void Jal(uint32_t r0, int32_t offs20)
     {
-        std::cout << std::format("jal {}, {}\n", regnames[r0], offs20);
+        if (r0 == ra)
+        {
+            std::cout << std::format("jal {}\n", offs20);
+        }
+        else
+        {
+            std::cout << std::format("jal {}, {}\n", regnames[r0], offs20);
+        }
     }
 
     // Miscellaneous instructions.
