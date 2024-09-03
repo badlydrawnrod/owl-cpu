@@ -1749,31 +1749,31 @@ public:
     // lb r0, imm12(r1)
     void Lb(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lb {}, {}({})\n", regnames[r0], imm12, r1);
+        std::cout << std::format("lb {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
     }
 
     // lbu r0, imm12(r1)
     void Lbu(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lw {}, {}({})\n", regnames[r0], imm12, r1);
+        std::cout << std::format("lw {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
     }
 
     // lh r0, imm12(r1)
     void Lh(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lh {}, {}({})\n", regnames[r0], imm12, r1);
+        std::cout << std::format("lh {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
     }
 
     // lhu r0, imm12(r1)
     void Lhu(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lhu {}, {}({})\n", regnames[r0], imm12, r1);
+        std::cout << std::format("lhu {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
     }
 
     // lw r0, imm12(r1)
     void Lw(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lw {}, {}({})\n", regnames[r0], imm12, r1);
+        std::cout << std::format("lw {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
     }
 
     // Store instructions.
@@ -1781,19 +1781,19 @@ public:
     // sb r0, imm12(r1)
     void Sb(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("sb {}, {}({})\n", regnames[r0], imm12, r1);
+        std::cout << std::format("sb {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
     }
 
     // sh r0, imm12(r1)
     void Sh(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("sh {}, {}({})\n", regnames[r0], imm12, r1);
+        std::cout << std::format("sh {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
     }
 
     // sw r0, imm12(r1)
     void Sw(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("sw {}, {}({})\n", regnames[r0], imm12, r1);
+        std::cout << std::format("sw {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
     }
 
     // Memory ordering instructions.
@@ -1808,7 +1808,7 @@ public:
     // jalr r0, offs12(r1)
     void Jalr(uint32_t r0, int32_t offs12, uint32_t r1)
     {
-        std::cout << std::format("jalr {}, {}({})\n", regnames[r0], offs12, r1);
+        std::cout << std::format("jalr {}, {}({})\n", regnames[r0], offs12, regnames[r1]);
     }
 
     // jal r0, offs20
