@@ -2052,17 +2052,21 @@ int main()
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
         auto rv32iImage = LoadRv32iImage();
+        std::cout << "Disassembling RISC-V encoded instructions...\n";
         DisassembleRv32i(rv32iImage);
 
         // Copy the result into our VM image to run it directly.
         std::ranges::copy(rv32iImage, image.begin());
+        std::cout << "\nRunning RISC-V encoded instructions...\n";
         RunRv32i(image);
 
         // Transcode it to Owl-2820 and copy the result into our VM image.
         auto owlImage = Rv32iToOwl(rv32iImage);
+        std::cout << "\nDisassembling Owl-2820 encoded instructions...\n";
         DisassembleOwl(owlImage);
         std::ranges::copy(owlImage, image.begin());
 
+        std::cout << "\nRunning Owl-2820 encoded instructions...\n";
         Run(image);
     }
     catch (const std::exception& e)
