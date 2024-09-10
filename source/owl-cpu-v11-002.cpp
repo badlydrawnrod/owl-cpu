@@ -280,63 +280,63 @@ concept OwlHandler =
         requires(T t, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t shift, int32_t offs12,
                  int32_t imm12, int32_t offs20, uint32_t uimm20, uint32_t ins) {
             //
-            { t.Ecall() } -> std::same_as<void>;
-            { t.Ebreak() } -> std::same_as<void>;
+            { t.Ecall() } -> std::same_as<typename T::Item>;
+            { t.Ebreak() } -> std::same_as<typename T::Item>;
             //
-            { t.Add(r0, r1, r2) } -> std::same_as<void>;
-            { t.Sub(r0, r1, r2) } -> std::same_as<void>;
-            { t.Sll(r0, r1, r2) } -> std::same_as<void>;
-            { t.Slt(r0, r1, r2) } -> std::same_as<void>;
-            { t.Sltu(r0, r1, r2) } -> std::same_as<void>;
-            { t.Xor(r0, r1, r2) } -> std::same_as<void>;
-            { t.Srl(r0, r1, r2) } -> std::same_as<void>;
-            { t.Sra(r0, r1, r2) } -> std::same_as<void>;
-            { t.Or(r0, r1, r2) } -> std::same_as<void>;
-            { t.And(r0, r1, r2) } -> std::same_as<void>;
+            { t.Add(r0, r1, r2) } -> std::same_as<typename T::Item>;
+            { t.Sub(r0, r1, r2) } -> std::same_as<typename T::Item>;
+            { t.Sll(r0, r1, r2) } -> std::same_as<typename T::Item>;
+            { t.Slt(r0, r1, r2) } -> std::same_as<typename T::Item>;
+            { t.Sltu(r0, r1, r2) } -> std::same_as<typename T::Item>;
+            { t.Xor(r0, r1, r2) } -> std::same_as<typename T::Item>;
+            { t.Srl(r0, r1, r2) } -> std::same_as<typename T::Item>;
+            { t.Sra(r0, r1, r2) } -> std::same_as<typename T::Item>;
+            { t.Or(r0, r1, r2) } -> std::same_as<typename T::Item>;
+            { t.And(r0, r1, r2) } -> std::same_as<typename T::Item>;
             //
-            { t.Slli(r0, r1, shift) } -> std::same_as<void>;
-            { t.Srli(r0, r1, shift) } -> std::same_as<void>;
-            { t.Srai(r0, r1, shift) } -> std::same_as<void>;
+            { t.Slli(r0, r1, shift) } -> std::same_as<typename T::Item>;
+            { t.Srli(r0, r1, shift) } -> std::same_as<typename T::Item>;
+            { t.Srai(r0, r1, shift) } -> std::same_as<typename T::Item>;
             //
-            { t.Beq(r0, r1, offs12) } -> std::same_as<void>;
-            { t.Bne(r0, r1, offs12) } -> std::same_as<void>;
-            { t.Blt(r0, r1, offs12) } -> std::same_as<void>;
-            { t.Bge(r0, r1, offs12) } -> std::same_as<void>;
-            { t.Bltu(r0, r1, offs12) } -> std::same_as<void>;
-            { t.Bgeu(r0, r1, offs12) } -> std::same_as<void>;
+            { t.Beq(r0, r1, offs12) } -> std::same_as<typename T::Item>;
+            { t.Bne(r0, r1, offs12) } -> std::same_as<typename T::Item>;
+            { t.Blt(r0, r1, offs12) } -> std::same_as<typename T::Item>;
+            { t.Bge(r0, r1, offs12) } -> std::same_as<typename T::Item>;
+            { t.Bltu(r0, r1, offs12) } -> std::same_as<typename T::Item>;
+            { t.Bgeu(r0, r1, offs12) } -> std::same_as<typename T::Item>;
             //
-            { t.Addi(r0, r1, imm12) } -> std::same_as<void>;
-            { t.Slti(r0, r1, imm12) } -> std::same_as<void>;
-            { t.Sltiu(r0, r1, imm12) } -> std::same_as<void>;
-            { t.Xori(r0, r1, imm12) } -> std::same_as<void>;
-            { t.Ori(r0, r1, imm12) } -> std::same_as<void>;
-            { t.Andi(r0, r1, imm12) } -> std::same_as<void>;
+            { t.Addi(r0, r1, imm12) } -> std::same_as<typename T::Item>;
+            { t.Slti(r0, r1, imm12) } -> std::same_as<typename T::Item>;
+            { t.Sltiu(r0, r1, imm12) } -> std::same_as<typename T::Item>;
+            { t.Xori(r0, r1, imm12) } -> std::same_as<typename T::Item>;
+            { t.Ori(r0, r1, imm12) } -> std::same_as<typename T::Item>;
+            { t.Andi(r0, r1, imm12) } -> std::same_as<typename T::Item>;
             //
-            { t.Lb(r0, imm12, r1) } -> std::same_as<void>;
-            { t.Lbu(r0, imm12, r1) } -> std::same_as<void>;
-            { t.Lh(r0, imm12, r1) } -> std::same_as<void>;
-            { t.Lhu(r0, imm12, r1) } -> std::same_as<void>;
-            { t.Lw(r0, imm12, r1) } -> std::same_as<void>;
+            { t.Lb(r0, imm12, r1) } -> std::same_as<typename T::Item>;
+            { t.Lbu(r0, imm12, r1) } -> std::same_as<typename T::Item>;
+            { t.Lh(r0, imm12, r1) } -> std::same_as<typename T::Item>;
+            { t.Lhu(r0, imm12, r1) } -> std::same_as<typename T::Item>;
+            { t.Lw(r0, imm12, r1) } -> std::same_as<typename T::Item>;
             //
-            { t.Sb(r0, imm12, r1) } -> std::same_as<void>;
-            { t.Sh(r0, imm12, r1) } -> std::same_as<void>;
-            { t.Sw(r0, imm12, r1) } -> std::same_as<void>;
+            { t.Sb(r0, imm12, r1) } -> std::same_as<typename T::Item>;
+            { t.Sh(r0, imm12, r1) } -> std::same_as<typename T::Item>;
+            { t.Sw(r0, imm12, r1) } -> std::same_as<typename T::Item>;
             //
-            { t.Fence() } -> std::same_as<void>;
+            { t.Fence() } -> std::same_as<typename T::Item>;
             //
-            { t.Jalr(r0, offs12, r1) } -> std::same_as<void>;
-            { t.Jal(r0, offs20) } -> std::same_as<void>;
+            { t.Jalr(r0, offs12, r1) } -> std::same_as<typename T::Item>;
+            { t.Jal(r0, offs20) } -> std::same_as<typename T::Item>;
             //
-            { t.Lui(r0, uimm20) } -> std::same_as<void>;
-            { t.Auipc(r0, uimm20) } -> std::same_as<void>;
+            { t.Lui(r0, uimm20) } -> std::same_as<typename T::Item>;
+            { t.Auipc(r0, uimm20) } -> std::same_as<typename T::Item>;
             //
-            { t.J(offs20) } -> std::same_as<void>;
-            { t.Call(offs20) } -> std::same_as<void>;
-            { t.Ret() } -> std::same_as<void>;
-            { t.Li(r0, imm12) } -> std::same_as<void>;
-            { t.Mv(r0, r1) } -> std::same_as<void>;
+            { t.J(offs20) } -> std::same_as<typename T::Item>;
+            { t.Call(offs20) } -> std::same_as<typename T::Item>;
+            { t.Ret() } -> std::same_as<typename T::Item>;
+            { t.Li(r0, imm12) } -> std::same_as<typename T::Item>;
+            { t.Mv(r0, r1) } -> std::same_as<typename T::Item>;
             //
-            { t.Illegal(ins) } -> std::same_as<void>;
+            { t.Illegal(ins) } -> std::same_as<typename T::Item>;
         };
 
 enum Syscall
@@ -355,6 +355,8 @@ class OwlCpu
     std::span<std::byte> memory; // Non-owning.
 
 public:
+    using Item = void;
+
     OwlCpu(std::span<std::uint32_t> image) : code{image}, memory{std::as_writable_bytes(image)}
     {
         // Set the stack pointer to the end of memory.
@@ -804,7 +806,7 @@ public:
 
 static_assert(OwlHandler<OwlCpu>);
 
-void DispatchOwl(OwlHandler auto& cpu, uint32_t ins)
+auto DispatchOwl(OwlHandler auto& cpu, uint32_t ins) -> auto
 {
     using namespace decode;
 
@@ -1011,6 +1013,8 @@ class Assembler
     }
 
 public:
+    using Item = void;
+
     void BindLabel(Label label)
     {
         const auto id = label.GetId();
@@ -1575,329 +1579,331 @@ private:
                                             "s8",   "s9", "s10", "s11", "t3", "t4", "t5", "t6"};
 
 public:
+    using Item = std::string;
+
     // System instructions.
-    void Ecall()
+    std::string Ecall()
     {
-        std::cout << "ecall\n";
+        return "ecall";
     }
 
-    void Ebreak()
+    std::string Ebreak()
     {
-        std::cout << "ebreak\n";
+        return "ebreak";
     }
 
     // Register-register instructions.
 
     // add r0, r1, r2
-    void Add(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string Add(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("add {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("add {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // sub r0, r1, r2
-    void Sub(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string Sub(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("sub {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("sub {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // sll r0, r1, r2
-    void Sll(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string Sll(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("sll {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("sll {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // slt r0, r1, r2
-    void Slt(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string Slt(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("slt {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("slt {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // sltu r0, r1, r2
-    void Sltu(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string Sltu(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("sltu {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("sltu {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // xor r0, r1, r2
-    void Xor(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string Xor(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("xor {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("xor {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // srl r0, r1, r2
-    void Srl(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string Srl(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("srl {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("srl {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // sra r0, r1, r2
-    void Sra(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string Sra(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("sra {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("sra {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // or r0, r1, r2
-    void Or(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string Or(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("or {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("or {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // and r0, r1, r2
-    void And(uint32_t r0, uint32_t r1, uint32_t r2)
+    std::string And(uint32_t r0, uint32_t r1, uint32_t r2)
     {
-        std::cout << std::format("and {}, {}, {}\n", regnames[r0], regnames[r1], regnames[r2]);
+        return std::format("and {}, {}, {}", regnames[r0], regnames[r1], regnames[r2]);
     }
 
     // Immediate shift instructions.
 
     // slli r0, r1, shift
-    void Slli(uint32_t r0, uint32_t r1, uint32_t shift)
+    std::string Slli(uint32_t r0, uint32_t r1, uint32_t shift)
     {
-        std::cout << std::format("slli {}, {}, {}\n", regnames[r0], regnames[r1], shift);
+        return std::format("slli {}, {}, {}", regnames[r0], regnames[r1], shift);
     }
 
     // srli r0, r1, shift
-    void Srli(uint32_t r0, uint32_t r1, uint32_t shift)
+    std::string Srli(uint32_t r0, uint32_t r1, uint32_t shift)
     {
-        std::cout << std::format("srli {}, {}, {}\n", regnames[r0], regnames[r1], shift);
+        return std::format("srli {}, {}, {}", regnames[r0], regnames[r1], shift);
     }
 
     // srai r0, r1, shift
-    void Srai(uint32_t r0, uint32_t r1, uint32_t shift)
+    std::string Srai(uint32_t r0, uint32_t r1, uint32_t shift)
     {
-        std::cout << std::format("srai {}, {}, {}\n", regnames[r0], regnames[r1], shift);
+        return std::format("srai {}, {}, {}", regnames[r0], regnames[r1], shift);
     }
 
     // Branch instructions.
 
     // beq r0, r1, offs12
-    void Beq(uint32_t r0, uint32_t r1, int32_t offs12)
+    std::string Beq(uint32_t r0, uint32_t r1, int32_t offs12)
     {
-        std::cout << std::format("beq {}, {}, {}\n", regnames[r0], regnames[r1], offs12);
+        return std::format("beq {}, {}, {}", regnames[r0], regnames[r1], offs12);
     }
 
     // bne r0, r1, offs12
-    void Bne(uint32_t r0, uint32_t r1, int32_t offs12)
+    std::string Bne(uint32_t r0, uint32_t r1, int32_t offs12)
     {
-        std::cout << std::format("bne {}, {}, {}\n", regnames[r0], regnames[r1], offs12);
+        return std::format("bne {}, {}, {}", regnames[r0], regnames[r1], offs12);
     }
 
     // blt r0, r1, offs12
-    void Blt(uint32_t r0, uint32_t r1, int32_t offs12)
+    std::string Blt(uint32_t r0, uint32_t r1, int32_t offs12)
     {
-        std::cout << std::format("blt {}, {}, {}\n", regnames[r0], regnames[r1], offs12);
+        return std::format("blt {}, {}, {}", regnames[r0], regnames[r1], offs12);
     }
 
     // bge r0, r1, offs12
-    void Bge(uint32_t r0, uint32_t r1, int32_t offs12)
+    std::string Bge(uint32_t r0, uint32_t r1, int32_t offs12)
     {
-        std::cout << std::format("bge {}, {}, {}\n", regnames[r0], regnames[r1], offs12);
+        return std::format("bge {}, {}, {}", regnames[r0], regnames[r1], offs12);
     }
 
     // bltu r0, r1, offs12
-    void Bltu(uint32_t r0, uint32_t r1, int32_t offs12)
+    std::string Bltu(uint32_t r0, uint32_t r1, int32_t offs12)
     {
-        std::cout << std::format("bltu {}, {}, {}\n", regnames[r0], regnames[r1], offs12);
+        return std::format("bltu {}, {}, {}", regnames[r0], regnames[r1], offs12);
     }
 
     // bgeu r0, r1, offs12
-    void Bgeu(uint32_t r0, uint32_t r1, int32_t offs12)
+    std::string Bgeu(uint32_t r0, uint32_t r1, int32_t offs12)
     {
-        std::cout << std::format("bgeu {}, {}, {}\n", regnames[r0], regnames[r1], offs12);
+        return std::format("bgeu {}, {}, {}", regnames[r0], regnames[r1], offs12);
     }
 
     // Register-immediate instructions.
 
     // addi r0, r1, imm12
-    void Addi(uint32_t r0, uint32_t r1, int32_t imm12)
+    std::string Addi(uint32_t r0, uint32_t r1, int32_t imm12)
     {
         if (r1 == 0)
         {
-            std::cout << std::format("li {}, {}\n", regnames[r0], imm12);
+            return std::format("li {}, {}", regnames[r0], imm12);
         }
         else if (imm12 == 0)
         {
-            std::cout << std::format("mv {}, {}\n", regnames[r0], regnames[r1]);
+            return std::format("mv {}, {}", regnames[r0], regnames[r1]);
         }
         else
         {
-            std::cout << std::format("addi {}, {}, {}\n", regnames[r0], regnames[r1], imm12);
+            return std::format("addi {}, {}, {}", regnames[r0], regnames[r1], imm12);
         }
     }
 
     // slti r0, r1, imm12
-    void Slti(uint32_t r0, uint32_t r1, int32_t imm12)
+    std::string Slti(uint32_t r0, uint32_t r1, int32_t imm12)
     {
-        std::cout << std::format("slti {}, {}, {}\n", regnames[r0], regnames[r1], imm12);
+        return std::format("slti {}, {}, {}", regnames[r0], regnames[r1], imm12);
     }
 
     // sltiu r0, r1, imm12
-    void Sltiu(uint32_t r0, uint32_t r1, int32_t imm12)
+    std::string Sltiu(uint32_t r0, uint32_t r1, int32_t imm12)
     {
-        std::cout << std::format("sltiu {}, {}, {}\n", regnames[r0], regnames[r1], imm12);
+        return std::format("sltiu {}, {}, {}", regnames[r0], regnames[r1], imm12);
     }
 
     // xori r0, r1, imm12
-    void Xori(uint32_t r0, uint32_t r1, int32_t imm12)
+    std::string Xori(uint32_t r0, uint32_t r1, int32_t imm12)
     {
-        std::cout << std::format("xori {}, {}, {}\n", regnames[r0], regnames[r1], imm12);
+        return std::format("xori {}, {}, {}", regnames[r0], regnames[r1], imm12);
     }
 
     // ori r0, r1, imm12
-    void Ori(uint32_t r0, uint32_t r1, int32_t imm12)
+    std::string Ori(uint32_t r0, uint32_t r1, int32_t imm12)
     {
-        std::cout << std::format("ori {}, {}, {}\n", regnames[r0], regnames[r1], imm12);
+        return std::format("ori {}, {}, {}", regnames[r0], regnames[r1], imm12);
     }
 
     // andi r0, r1, imm12
-    void Andi(uint32_t r0, uint32_t r1, int32_t imm12)
+    std::string Andi(uint32_t r0, uint32_t r1, int32_t imm12)
     {
-        std::cout << std::format("andi {}, {}, {}\n", regnames[r0], regnames[r1], imm12);
+        return std::format("andi {}, {}, {}", regnames[r0], regnames[r1], imm12);
     }
 
     // Load instructions.
 
     // lb r0, imm12(r1)
-    void Lb(uint32_t r0, int32_t imm12, uint32_t r1)
+    std::string Lb(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lb {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
+        return std::format("lb {}, {}({})", regnames[r0], imm12, regnames[r1]);
     }
 
     // lbu r0, imm12(r1)
-    void Lbu(uint32_t r0, int32_t imm12, uint32_t r1)
+    std::string Lbu(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lw {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
+        return std::format("lw {}, {}({})", regnames[r0], imm12, regnames[r1]);
     }
 
     // lh r0, imm12(r1)
-    void Lh(uint32_t r0, int32_t imm12, uint32_t r1)
+    std::string Lh(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lh {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
+        return std::format("lh {}, {}({})", regnames[r0], imm12, regnames[r1]);
     }
 
     // lhu r0, imm12(r1)
-    void Lhu(uint32_t r0, int32_t imm12, uint32_t r1)
+    std::string Lhu(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lhu {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
+        return std::format("lhu {}, {}({})", regnames[r0], imm12, regnames[r1]);
     }
 
     // lw r0, imm12(r1)
-    void Lw(uint32_t r0, int32_t imm12, uint32_t r1)
+    std::string Lw(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("lw {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
+        return std::format("lw {}, {}({})", regnames[r0], imm12, regnames[r1]);
     }
 
     // Store instructions.
 
     // sb r0, imm12(r1)
-    void Sb(uint32_t r0, int32_t imm12, uint32_t r1)
+    std::string Sb(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("sb {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
+        return std::format("sb {}, {}({})", regnames[r0], imm12, regnames[r1]);
     }
 
     // sh r0, imm12(r1)
-    void Sh(uint32_t r0, int32_t imm12, uint32_t r1)
+    std::string Sh(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("sh {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
+        return std::format("sh {}, {}({})", regnames[r0], imm12, regnames[r1]);
     }
 
     // sw r0, imm12(r1)
-    void Sw(uint32_t r0, int32_t imm12, uint32_t r1)
+    std::string Sw(uint32_t r0, int32_t imm12, uint32_t r1)
     {
-        std::cout << std::format("sw {}, {}({})\n", regnames[r0], imm12, regnames[r1]);
+        return std::format("sw {}, {}({})", regnames[r0], imm12, regnames[r1]);
     }
 
     // Memory ordering instructions.
 
-    void Fence()
+    std::string Fence()
     {
-        std::cout << "fence\n";
+        return "fence";
     }
 
     // Subroutine call instructions.
 
     // jalr r0, offs12(r1)
-    void Jalr(uint32_t r0, int32_t offs12, uint32_t r1)
+    std::string Jalr(uint32_t r0, int32_t offs12, uint32_t r1)
     {
         if (r0 == zero && r1 == ra && offs12 == 0)
         {
-            std::cout << "ret\n";
+            return "ret";
         }
         else
         {
-            std::cout << std::format("jalr {}, {}({})\n", regnames[r0], offs12, regnames[r1]);
+            return std::format("jalr {}, {}({})", regnames[r0], offs12, regnames[r1]);
         }
     }
 
     // jal r0, offs20
-    void Jal(uint32_t r0, int32_t offs20)
+    std::string Jal(uint32_t r0, int32_t offs20)
     {
         if (r0 == ra)
         {
-            std::cout << std::format("jal {}\n", offs20);
+            return std::format("jal {}", offs20);
         }
         else
         {
-            std::cout << std::format("jal {}, {}\n", regnames[r0], offs20);
+            return std::format("jal {}, {}", regnames[r0], offs20);
         }
     }
 
     // Miscellaneous instructions.
 
     // lui r0, uimm20
-    void Lui(uint32_t r0, uint32_t uimm20)
+    std::string Lui(uint32_t r0, uint32_t uimm20)
     {
-        std::cout << std::format("lui {}, {}\n", regnames[r0], uimm20);
+        return std::format("lui {}, {}", regnames[r0], uimm20);
     }
 
     // auipc r0, uimm20
-    void Auipc(uint32_t r0, uint32_t uimm20)
+    std::string Auipc(uint32_t r0, uint32_t uimm20)
     {
-        std::cout << std::format("auipc {}, {}\n", regnames[r0], uimm20);
+        return std::format("auipc {}, {}", regnames[r0], uimm20);
     }
 
     // Owl-2820 only instructions.
 
     // j offs20
-    void J(int32_t offs20)
+    std::string J(int32_t offs20)
     {
-        std::cout << std::format("j {}\n", offs20);
+        return std::format("j {}", offs20);
     }
 
     // call offs20
-    void Call(int32_t offs20)
+    std::string Call(int32_t offs20)
     {
-        std::cout << std::format("call {}\n", offs20);
+        return std::format("call {}", offs20);
     }
 
     // ret
-    void Ret()
+    std::string Ret()
     {
-        std::cout << "ret\n";
+        return "ret";
     }
 
     // li r0, imm12
-    void Li(uint32_t r0, int32_t imm12)
+    std::string Li(uint32_t r0, int32_t imm12)
     {
-        std::cout << std::format("li {}, {}\n", regnames[r0], imm12);
+        return std::format("li {}, {}", regnames[r0], imm12);
     }
 
     // mv r0, r1
-    void Mv(uint32_t r0, uint32_t r1)
+    std::string Mv(uint32_t r0, uint32_t r1)
     {
-        std::cout << std::format("mv {}, {}\n", regnames[r0], regnames[r1]);
+        return std::format("mv {}, {}", regnames[r0], regnames[r1]);
     }
 
     // illegal
-    void Illegal(uint32_t ins)
+    std::string Illegal(uint32_t ins)
     {
-        std::cout << std::format("illegal {:08x}\n", ins);
+        return std::format("illegal {:08x}", ins);
     }
 };
 
 static_assert(OwlHandler<Disassembler>);
 
-void DispatchRv32i(OwlHandler auto& a, uint32_t code)
+auto DispatchRv32i(OwlHandler auto& a, uint32_t code) -> auto
 {
     DecodeRv32 rv(code);
 
@@ -1982,8 +1988,7 @@ void DisassembleOwl(std::span<uint32_t> image)
     {
         if (code != 0)
         {
-            std::cout << std::format("{:08x}: ", address);
-            DispatchOwl(d, code);
+            std::cout << std::format("{:08x}: {}\n", address, DispatchOwl(d, code));
         }
         address += 4;
     }
@@ -1997,8 +2002,7 @@ void DisassembleRv32i(std::span<uint32_t> image)
     {
         if (code != 0)
         {
-            std::cout << std::format("{:08x}: ", address);
-            DispatchRv32i(d, code);
+            std::cout << std::format("{:08x}: {}\n", address, DispatchRv32i(d, code));
         }
         address += 4;
     }

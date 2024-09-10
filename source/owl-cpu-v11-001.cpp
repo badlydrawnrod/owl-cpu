@@ -1689,12 +1689,15 @@ int main()
 
         // Copy the result into our VM image to run it directly.
         std::ranges::copy(rv32iImage, image.begin());
+
+        std::cout << "Running RISC-V encoded instructions...\n";
         RunRv32i(image);
 
         // Transcode it to Owl-2820 and copy the result into our VM image.
         auto owlImage = Rv32iToOwl(rv32iImage);
         std::ranges::copy(owlImage, image.begin());
 
+        std::cout << "\nRunning Owl-2820 encoded instructions...\n";
         Run(image);
     }
     catch (const std::exception& e)
