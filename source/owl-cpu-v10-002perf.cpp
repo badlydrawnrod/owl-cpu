@@ -1678,7 +1678,7 @@ int main()
         auto rv32iImage = LoadRv32iImage();
 
         // Crude microbenchmark.
-        constexpr int attempts = 100000;
+        constexpr int attempts = 1'000'000;
 
         // Copy the result into our VM image to run it directly.
         std::ranges::copy(rv32iImage, image.begin());
@@ -1705,9 +1705,9 @@ int main()
         const std::chrono::duration<double> elapsedOwl{endOwl - startOwl};
 
         std::cout << "Elapsed Rv32i: " << elapsedRv32i << '\n';
-        std::cout << "Elapsed   Owl: " << elapsedOwl << '\n';
-        std::cout << "rv32i/owl: " << (elapsedRv32i / elapsedOwl) << '\n';
-        std::cout << "owl/rv32i: " << (elapsedOwl / elapsedRv32i) << '\n';
+        std::cout << "Elapsed   Owl: " << elapsedOwl << "\n\n";
+        std::cout << "RV32I timing as percentage of Owl: " << 100.0 * (elapsedRv32i / elapsedOwl) << '\n';
+        std::cout << "Owl timing as percentage of RV32I: " << 100.0 * (elapsedOwl / elapsedRv32i) << '\n';
     }
     catch (const std::exception& e)
     {
