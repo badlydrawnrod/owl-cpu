@@ -1,6 +1,7 @@
 #pragma once
 
 #include "endian.h"
+#include "instruction_handler.h"
 #include "opcodes.h"
 
 #include <cstdint>
@@ -145,6 +146,8 @@ class Assembler
     }
 
 public:
+    using Item = void;
+
     void BindLabel(Label label)
     {
         const auto id = label.GetId();
@@ -630,3 +633,5 @@ public:
         Emit(word);
     }
 };
+
+static_assert(InstructionHandler<Assembler>);

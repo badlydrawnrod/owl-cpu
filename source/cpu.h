@@ -1,6 +1,7 @@
 #pragma once
 
 #include "endian.h"
+#include "instruction_handler.h"
 #include "memory.h"
 
 #include <cstdint>
@@ -60,6 +61,8 @@ class OwlCpu
     std::span<std::byte> memory; // Non-owning.
 
 public:
+    using Item = void;
+
     OwlCpu(std::span<std::uint32_t> image) : code{image}, memory{std::as_writable_bytes(image)}
     {
         // Set the stack pointer to the end of memory.
@@ -93,7 +96,7 @@ public:
             break;
 
         case Syscall::PrintFib:
-            // TODO(lbavm-011): Turn this off when benchmarking.        
+            // TODO(lbavm-011): Turn this off when benchmarking.
             std::cout << "fib(" << x[a0] << ") = " << x[a1] << '\n';
             break;
         }
@@ -508,3 +511,5 @@ public:
         done = true;
     }
 };
+
+static_assert(InstructionHandler<OwlCpu>);

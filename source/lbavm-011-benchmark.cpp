@@ -32,69 +32,12 @@ void RunRv32i(std::span<uint32_t> image)
     }
 }
 
-void Transcode(Assembler& a, uint32_t code)
-{
-    DecodeRv32 rv(code);
-
-    // clang-format off
-    switch (code) {
-        case 0x00000073: return a.Ecall();
-        case 0x00100073: return a.Ebreak();
-    }
-    switch (code & 0xfe00707f) {
-        case 0x00000033: return a.Add(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x40000033: return a.Sub(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00001033: return a.Sll(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00002033: return a.Slt(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00003033: return a.Sltu(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00004033: return a.Xor(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00005033: return a.Srl(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x40005033: return a.Sra(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00006033: return a.Or(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00007033: return a.And(rv.Rd(), rv.Rs1(), rv.Rs2());
-        case 0x00001013: return a.Slli(rv.Rd(), rv.Rs1(), rv.Shamtw());
-        case 0x00005013: return a.Srli(rv.Rd(), rv.Rs1(), rv.Shamtw());
-        case 0x40005013: return a.Srai(rv.Rd(), rv.Rs1(), rv.Shamtw());
-    }
-    switch (code & 0x0000707f) {
-        case 0x00000063: return a.Beq(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00001063: return a.Bne(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00004063: return a.Blt(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00005063: return a.Bge(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00006063: return a.Bltu(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00007063: return a.Bgeu(rv.Rs1(), rv.Rs2(), rv.Bimmediate());
-        case 0x00000067: return a.Jalr(rv.Rd(), rv.Iimmediate(),rv.Rs1()); // changed order
-        case 0x00000013: return a.Addi(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00002013: return a.Slti(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00003013: return a.Sltiu(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00004013: return a.Xori(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00006013: return a.Ori(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00007013: return a.Andi(rv.Rd(), rv.Rs1(), rv.Iimmediate());
-        case 0x00000003: return a.Lb(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00001003: return a.Lh(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00002003: return a.Lw(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00004003: return a.Lbu(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00005003: return a.Lhu(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00000023: return a.Sb(rv.Rs1(), rv.Simmediate(), rv.Rs2()); // changed order
-        case 0x00001023: return a.Sh(rv.Rs1(), rv.Simmediate(), rv.Rs2()); // changed order
-        case 0x00002023: return a.Sw(rv.Rs1(), rv.Simmediate(), rv.Rs2()); // changed order
-        case 0x0000000f: return a.Fence();
-    }
-    switch (code & 0x0000007f) {
-        case 0x0000006f: return a.Jal(rv.Rd(), rv.Jimmediate());
-        case 0x00000037: return a.Lui(rv.Rd(), rv.Uimmediate());
-        case 0x00000017: return a.Auipc(rv.Rd(), rv.Uimmediate());
-    }
-    // clang-format on
-    return a.Illegal(code);
-}
-
 std::vector<uint32_t> Rv32iToOwl(std::span<uint32_t> image)
 {
     Assembler a;
     for (auto code : image)
     {
-        Transcode(a, code);
+        DispatchRv32i(a, code);
     }
     return a.Code();
 }

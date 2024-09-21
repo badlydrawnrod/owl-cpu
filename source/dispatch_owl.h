@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cpu.h"
+#include "instruction_handler.h"
 #include "opcodes.h"
 
 #include <cstdint>
@@ -48,7 +48,7 @@ namespace decode
     }
 } // namespace decode
 
-void DispatchOwl(OwlCpu& cpu, uint32_t ins)
+void DispatchOwl(InstructionHandler auto& cpu, uint32_t ins)
 {
     using namespace decode;
 

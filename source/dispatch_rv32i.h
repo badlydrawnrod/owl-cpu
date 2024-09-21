@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cpu.h"
+#include "instruction_handler.h"
 
 #include <cstdint>
 
@@ -71,7 +71,7 @@ public:
     }
 };
 
-void DispatchRv32i(OwlCpu& a, uint32_t code)
+void DispatchRv32i(InstructionHandler auto& a, uint32_t code)
 {
     DecodeRv32 rv(code);
 
