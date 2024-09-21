@@ -1,8 +1,5 @@
 #include <stdint.h>
-
-
-// We don't have an implementation of print_fib() yet.
-extern void print_fib(uint32_t i, uint32_t result);
+#include <stdio.h>
 
 static uint32_t fib(uint32_t n)
 {
@@ -26,7 +23,7 @@ int main(void)
     for (uint32_t i = 0; i < 48; i++)
     {
         uint32_t result = fib(i);
-        print_fib(i, result);
+        printf("fib(%u) = %u\n", i, result);
     }
     return 0;
 }
