@@ -54,6 +54,6 @@ target_compile_features(lbavm-010-benchmark PUBLIC cxx_std_20)
 set_target_properties(lbavm-010-benchmark PROPERTIES CXX_EXTENSIONS OFF)
 
 # Part 11 WIP
-add_executable(lbavm-011 source/lbavm-011.cpp source/assembler.h source/endian.h source/memory.h source/opcodes.h source/owl-cpu.h)
+add_executable(lbavm-011 source/lbavm-011.cpp)
 target_compile_features(lbavm-011 PUBLIC cxx_std_20)
 set_target_properties(lbavm-011 PROPERTIES CXX_EXTENSIONS OFF)
