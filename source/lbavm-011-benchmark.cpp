@@ -14,7 +14,7 @@
 
 void Run(std::span<uint32_t> image)
 {
-    OwlCpu cpu(image);
+    OwlCpu<Benchmarking::isBenchmarking> cpu(image);
     while (!cpu.Done())
     {
         const uint32_t ins = cpu.Fetch();
@@ -24,7 +24,7 @@ void Run(std::span<uint32_t> image)
 
 void RunRv32i(std::span<uint32_t> image)
 {
-    OwlCpu cpu(image);
+    OwlCpu<Benchmarking::isBenchmarking> cpu(image);
     while (!cpu.Done())
     {
         const uint32_t ins = cpu.Fetch();
@@ -116,8 +116,10 @@ int main()
 
         std::cout << "Elapsed Rv32i: " << elapsedRv32i << '\n';
         std::cout << "Elapsed   Owl: " << elapsedOwl << "\n\n";
-        std::cout << "RV32I timing as percentage of Owl: " << 100.0 * (elapsedRv32i / elapsedOwl) << '\n';
-        std::cout << "Owl timing as percentage of RV32I: " << 100.0 * (elapsedOwl / elapsedRv32i) << '\n';
+        std::cout << "RV32I timing as percentage of Owl: " << 100.0 * (elapsedRv32i / elapsedOwl)
+                  << '\n';
+        std::cout << "Owl timing as percentage of RV32I: " << 100.0 * (elapsedOwl / elapsedRv32i)
+                  << '\n';
     }
     catch (const std::exception& e)
     {
