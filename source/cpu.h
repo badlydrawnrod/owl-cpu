@@ -87,11 +87,13 @@ public:
         switch (syscall)
         {
         case Syscall::Exit:
+            // TODO(lbavm-011): Turn this off when benchmarking.
             std::cout << "Exiting with status " << x[a0] << '\n';
             done = true;
             break;
 
         case Syscall::PrintFib:
+            // TODO(lbavm-011): Turn this off when benchmarking.        
             std::cout << "fib(" << x[a0] << ") = " << x[a1] << '\n';
             break;
         }
