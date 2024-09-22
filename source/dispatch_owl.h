@@ -48,7 +48,7 @@ namespace decode
     }
 } // namespace decode
 
-void DispatchOwl(InstructionHandler auto& cpu, uint32_t ins)
+auto DispatchOwl(InstructionHandler auto& cpu, uint32_t ins) -> auto
 {
     using namespace decode;
 

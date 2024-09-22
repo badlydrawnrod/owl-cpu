@@ -71,7 +71,7 @@ public:
     }
 };
 
-void DispatchRv32i(InstructionHandler auto& a, uint32_t code)
+auto DispatchRv32i(InstructionHandler auto& a, uint32_t code) -> auto
 {
     DecodeRv32 rv(code);
 

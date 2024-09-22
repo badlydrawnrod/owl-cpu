@@ -1,5 +1,6 @@
 #include "assembler.h"
 #include "cpu.h"
+#include "disassembler.h"
 #include "dispatch_owl.h"
 #include "dispatch_rv32i.h"
 #include "endian.h"
@@ -7,6 +8,7 @@
 #include "opcodes.h"
 
 #include <cstdint>
+#include <format>
 #include <iostream>
 #include <span>
 #include <vector>
@@ -39,6 +41,34 @@ std::vector<uint32_t> Rv32iToOwl(std::span<uint32_t> image)
         DispatchRv32i(a, code);
     }
     return a.Code();
+}
+
+void DisassembleOwl(std::span<uint32_t> image)
+{
+    Disassembler d;
+    uint32_t address = 0;
+    for (auto code : image)
+    {
+        if (code != 0)
+        {
+            std::cout << std::format("{:08x}: {}\n", address, DispatchOwl(d, code));
+        }
+        address += 4;
+    }
+}
+
+void DisassembleRv32i(std::span<uint32_t> image)
+{
+    Disassembler d;
+    uint32_t address = 0;
+    for (auto code : image)
+    {
+        if (code != 0)
+        {
+            std::cout << std::format("{:08x}: {}\n", address, DispatchRv32i(d, code));
+        }
+        address += 4;
+    }
 }
 
 std::span<uint32_t> LoadRv32iImage()
@@ -85,15 +115,15 @@ int main()
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
         auto rv32iImage = LoadRv32iImage();
-
-        // Copy the result into our VM image to run it directly.
+        DisassembleRv32i(rv32iImage);
         std::ranges::copy(rv32iImage, image.begin());
 
         std::cout << "Running RISC-V encoded instructions...\n";
         RunRv32i(image);
 
-        // Transcode it to Owl-2820 and copy the result into our VM image.
+        // Transcode it to Owl-2820.
         auto owlImage = Rv32iToOwl(rv32iImage);
+        DisassembleOwl(owlImage);
         std::ranges::copy(owlImage, image.begin());
 
         std::cout << "\nRunning Owl-2820 encoded instructions...\n";
