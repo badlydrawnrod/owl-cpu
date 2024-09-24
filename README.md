@@ -2,6 +2,11 @@
 
 Welcome to the Owl-2820 repo. Here you'll find the source code for the series ["Let's build a virtual machine"](https://badlydrawnrod.github.io/tags/owl/), which describes how to build a virtual machine from scratch.
 
+# Quick start
+
+Follow the instructions in [BUILDING](BUILDING.md) to get started.
+
+
 # Building a virtual machine from scratch
 
 Posts, in chronological order, describing how to implement the Owl-2820 VM.
