@@ -51,13 +51,6 @@ enum Syscall
     PrintFib
 };
 
-enum class Benchmarking
-{
-    notBenchmarking,
-    isBenchmarking
-};
-
-template<Benchmarking runAsBenchmark = Benchmarking::notBenchmarking>
 class OwlCpu
 {
     uint32_t pc = 0;             // The program counter.
@@ -97,18 +90,12 @@ public:
         switch (syscall)
         {
         case Syscall::Exit:
-            if constexpr (runAsBenchmark == Benchmarking::notBenchmarking)
-            {
-                std::cout << "Exiting with status " << x[a0] << '\n';
-            }
+            std::cout << "Exiting with status " << x[a0] << '\n';
             done = true;
             break;
 
         case Syscall::PrintFib:
-            if constexpr (runAsBenchmark == Benchmarking::notBenchmarking)
-            {
-                std::cout << "fib(" << x[a0] << ") = " << x[a1] << '\n';
-            }
+            std::cout << "fib(" << x[a0] << ") = " << x[a1] << '\n';
             break;
         }
     }
@@ -523,4 +510,4 @@ public:
     }
 };
 
-static_assert(InstructionHandler<OwlCpu<>>);
+static_assert(InstructionHandler<OwlCpu>);
