@@ -22,7 +22,7 @@ Posts, in chronological order, describing how to implement the Owl-2820 VM.
 - [Part 8 - Using a C compiler to create Owl-2820 programs](https://badlydrawnrod.github.io/posts/2024/08/20/lbavm-008/)
 - [Part 9 - Running a compiled image on an Owl-2820 VM](https://badlydrawnrod.github.io/posts/2024/09/01/lbavm-009/)
 - [Part 10 - Running RISC-V instructions directly](https://badlydrawnrod.github.io/posts/2024/09/08/lbavm-010/)
-- Part 11 - Coming soon...
+- [Part 11 - Revisiting the instruction handler](https://badlydrawnrod.github.io/posts/2024/10/05/lbavm-011/)
 
 # Licensing
 
