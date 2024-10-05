@@ -8,6 +8,8 @@ concept InstructionHandler =
         requires(T t, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t shift, int32_t offs12,
                  int32_t imm12, int32_t offs20, uint32_t uimm20, uint32_t ins) {
             //
+            typename T::Item;
+            //
             { t.Ecall() } -> std::same_as<typename T::Item>;
             { t.Ebreak() } -> std::same_as<typename T::Item>;
             //
