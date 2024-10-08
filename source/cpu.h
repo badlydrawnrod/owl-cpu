@@ -48,7 +48,10 @@ enum
 enum Syscall
 {
     Exit,
-    PrintFib
+    PrintFib,
+    Randomize,
+    Random,
+    Puts
 };
 
 class OwlCpu
@@ -96,6 +99,20 @@ public:
 
         case Syscall::PrintFib:
             std::cout << "fib(" << x[a0] << ") = " << x[a1] << '\n';
+            break;
+
+        case Syscall::Randomize:
+            std::srand(time(nullptr));
+            break;
+
+        case Syscall::Random:
+            x[a0] = std::rand() % x[a0];
+            break;
+
+        case Syscall::Puts:
+            // TODO: Do *not* try this at home without at least a bounds check.
+            // Who knows what horrors the user-mode code is giving us.
+            std::puts(reinterpret_cast<const char*>(memory.data()) + x[a0]);
             break;
         }
     }
