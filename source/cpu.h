@@ -49,9 +49,9 @@ enum Syscall
 {
     Exit,
     PrintFib,
+    Puts,
     Randomize,
-    Random,
-    Puts
+    Random
 };
 
 class OwlCpu
@@ -106,6 +106,7 @@ public:
             break;
 
         case Syscall::Random:
+            // TODO: Again, do *not* try this at home. What if a0 is zero?
             x[a0] = std::rand() % x[a0];
             break;
 
