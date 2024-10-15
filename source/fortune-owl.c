@@ -80,6 +80,46 @@ static char* aphorisms[] = {
         "The road to hell is paved with good intentions.",
 };
 
+void display(int i)
+{
+    switch (i)
+    {
+    case 0:
+        puts(aphorisms[9]);
+        break;
+    case 1:
+        puts(aphorisms[8]);
+        break;
+    case 2:
+        puts(aphorisms[7]);
+        break;
+    case 3:
+        puts(aphorisms[6]);
+        break;
+    case 4:
+        puts(aphorisms[5]);
+        break;
+    case 5:
+        puts(aphorisms[4]);
+        break;
+    case 6:
+        puts(aphorisms[3]);
+        break;
+    case 7:
+        puts(aphorisms[2]);
+        break;
+    case 8:
+        puts(aphorisms[1]);
+        break;
+    case 9:
+        puts(aphorisms[0]);
+        break;
+    default:
+        puts("Never trust your inputs.");
+        break;
+    }
+}
+
 int main()
 {
     randomize();
@@ -87,6 +127,8 @@ int main()
 
     uint32_t i = random(size);
     puts(aphorisms[i]);
+    
+    display(i);
 
     return 0;
 }
