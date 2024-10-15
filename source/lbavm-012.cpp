@@ -34,6 +34,18 @@ void RunRv32i(std::span<uint32_t> image)
     }
 }
 
+void RunAndTraceRv32i(std::span<uint32_t> image)
+{
+    OwlCpu cpu(image);
+    Disassembler d;
+    while (!cpu.Done())
+    {
+        const uint32_t ins = cpu.Fetch();
+        std::cout << std::format("{:08x}: {:20}\n", cpu.pc, DispatchRv32i(d, ins));
+        DispatchRv32i(cpu, ins);
+    }
+}
+
 std::vector<uint32_t> Rv32iToOwl(std::span<uint32_t> image)
 {
     Assembler a;
@@ -94,16 +106,21 @@ int main(int argc, char* argv[])
             return 2;
         }
 
-        // Create a 4K memory image.
+        // Create an 4K memory image.
         constexpr size_t memorySize = 4096;
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
         auto rv32iImage = LoadRv32iImage(argv[1]);
+
+        // TODO: we currently don't know what's code and what's data so we get garbage for some of
+        // it.
         // DisassembleRv32i(rv32iImage);
+
         std::ranges::copy(rv32iImage, image.begin());
 
         std::cout << "Running RISC-V encoded instructions...\n";
-        RunRv32i(image);
+        // RunRv32i(image);
+        RunAndTraceRv32i(image);
 
         // // Transcode it to Owl-2820.
         // // TODO: we don't want to do this for the whole thing ... only for the code.

@@ -114,9 +114,9 @@ auto DispatchRv32i(InstructionHandler auto& a, uint32_t code) -> auto
         case 0x00002003: return a.Lw(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
         case 0x00004003: return a.Lbu(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
         case 0x00005003: return a.Lhu(rv.Rd(), rv.Iimmediate(), rv.Rs1()); // changed order
-        case 0x00000023: return a.Sb(rv.Rs1(), rv.Simmediate(), rv.Rs2()); // changed order
-        case 0x00001023: return a.Sh(rv.Rs1(), rv.Simmediate(), rv.Rs2()); // changed order
-        case 0x00002023: return a.Sw(rv.Rs1(), rv.Simmediate(), rv.Rs2()); // changed order
+        case 0x00000023: return a.Sb(rv.Rs2(), rv.Simmediate(), rv.Rs1()); // changed order
+        case 0x00001023: return a.Sh(rv.Rs2(), rv.Simmediate(), rv.Rs1()); // changed order
+        case 0x00002023: return a.Sw(rv.Rs2(), rv.Simmediate(), rv.Rs1()); // changed order
         case 0x0000000f: return a.Fence();
     }
     switch (code & 0x0000007f) {
