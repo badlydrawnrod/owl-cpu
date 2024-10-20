@@ -119,8 +119,8 @@ int main(int argc, char* argv[])
         std::ranges::copy(rv32iImage, image.begin());
 
         std::cout << "Running RISC-V encoded instructions...\n";
-        // RunRv32i(image);
-        RunAndTraceRv32i(image);
+        RunRv32i(image);
+        // RunAndTraceRv32i(image);
 
         // // Transcode it to Owl-2820.
         // // TODO: we don't want to do this for the whole thing ... only for the code.

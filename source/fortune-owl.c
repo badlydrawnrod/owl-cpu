@@ -67,6 +67,7 @@ static inline uint32_t random(uint32_t n)
     return a0;
 }
 
+// Read only data. The strings, and the array itself, go into the `.rodata` section.
 static char* aphorisms[] = {
         "Absence makes the heart grow fonder.",
         "A chain is only as strong as its weakest link.",
@@ -79,6 +80,14 @@ static char* aphorisms[] = {
         "Measure twice. Cut once.",
         "The road to hell is paved with good intentions.",
 };
+
+// Initialised data.
+static int intInSData = 0x12345678;      // This is in the .`sdata` section.
+static int arrayInData[] = {1, 2, 3, 4}; // This is in the `.data` section.
+
+// Uninitialised data.
+static int intVal;       // This is in the `.sbss` section.
+static int dieRolls[10]; // This is in the `.bss` section.
 
 void display(int i)
 {
@@ -125,10 +134,71 @@ int main()
     randomize();
     size_t size = sizeof(aphorisms) / sizeof(char*);
 
+    // Demonstrate `.rodata` (read-only data).
     uint32_t i = random(size);
     puts(aphorisms[i]);
-    
     display(i);
 
-    return 0;
+    // TODO: Demonstrate `.data` and `.sdata` (initialised data).
+    // The compiler can't optimize this away because it doesn't know what `random()` is going to
+    // return.
+    intInSData += random(size);
+    for (int j = 0; j < sizeof(arrayInData) / sizeof(int); j++)
+    {
+        arrayInData[j] += intInSData;
+        intInSData += random(arrayInData[j]);
+    }
+    intVal = arrayInData[random(sizeof(arrayInData) / sizeof(int))];
+
+    // TODO: Demonstrate `.bss` and `.sbss` (uninitialised data).
+    for (int j = 0; j < 10; j++)
+    {
+        dieRolls[j] = random(6);
+    }
+    puts(aphorisms[dieRolls[random(10)]]);
+
+    return intInSData + intVal;
 }
+
+/*
+
+If this doesn't motivate a linker script then I don't know what will.
+
+$ clang -Os --target=riscv32 -march=rv32i -mabi=ilp32 -ffreestanding -ffunction-sections \
+      -fdata-sections -nostdlib -nodefaultlibs .\source\crt0.s .\source\fortune-owl.c -fuse-ld=lld \
+      "-Wl,--gc-sections" \
+      "-Wl,--section-start=.init=0" \
+      "-Wl,--section-start=.text=100" \
+      "-Wl,--section-start=.rodata=400" \
+      "-Wl,--section-start=.sdata=600" \
+      "-Wl,--section-start=.data=700" \
+      "-Wl,--section-start=.sbss=800" \
+      "-Wl,--section-start=.bss=900"
+
+$ llvm-objdump.exe -h a.out
+
+a.out:  file format elf32-littleriscv
+
+Sections:
+Idx Name              Size     VMA      Type
+  0                   00000000 00000000
+  1 .init             0000001c 00000000 TEXT
+  2 .text             00000238 00000100 TEXT
+  3 .rodata           000001df 00000400 DATA
+  4 .sdata            00000004 00000600 DATA
+  5 .data             00000010 00000700 DATA
+  6 .sbss             00000004 00000800 BSS
+  7 .bss              00000028 00000900 BSS
+  8 .eh_frame         0000002c 00001928 DATA
+  9 .riscv.attributes 0000001c 00000000
+ 10 .comment          00000029 00000000
+ 11 .symtab           000001a0 00000000
+ 12 .shstrtab         0000006c 00000000
+ 13 .strtab           0000009b 00000000
+
+Don't extract .sbss or .bss as they're NOLOAD sections, i.e., we don't want to copy them into the
+image. However, we're currently at the mercy of the VM itself to zero them.
+
+$ llvm-objcopy a.out -O binary a.bin -j .init -j .text -j .rodata -j .sdata -j .data
+
+*/
