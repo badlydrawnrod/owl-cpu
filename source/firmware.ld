@@ -4,16 +4,19 @@ OUTPUT_ARCH(riscv)
 ENTRY(_start)
 
 /* Configuration variables to be used by the MEMORY command. */
-MEM_START = 0x00000000;
-MEM_SIZE = 4K;
+ROM_START = 0x00000000;
+ROM_SIZE = 2K;
+RAM_START = 0x20000000;
+RAM_SIZE = 2K;
 
-/* The stack grows down from the end of memory. */
-STACK_TOP = MEM_START + MEM_SIZE;
+/* The stack grows down from the end of RAM. */
+STACK_TOP = RAM_START + RAM_SIZE;
 
 /* Memory space definition. These blocks of memory will be used in the SECTIONS command. */
 MEMORY
 {
-    mem (rw) : ORIGIN = MEM_START, LENGTH = MEM_SIZE
+    rom (rx)  : ORIGIN = ROM_START, LENGTH = ROM_SIZE
+    ram (!rx) : ORIGIN = RAM_START, LENGTH = RAM_SIZE
 }
 
 SECTIONS
@@ -21,29 +24,29 @@ SECTIONS
     PROVIDE (__stack_top = STACK_TOP);
 
     /* Startup code */
-    .init MEM_START :
+    .init ROM_START :
     {
         KEEP (*(SORT_NONE(.init)))
-    } > mem
+    } > rom
 
     /* Code. */
     .text : ALIGN(4)
     {
         *(.text)
-    } > mem
+    } > rom
 
     /* Read-only data. */
     .rodata : ALIGN(4)
     {
         *(.rodata .rodata.* .gnu.linkonce.r.*)
-    } > mem
+    } > rom
 
     /* Initialised data. */
     .data : ALIGN(4)
     {
         __DATA_BEGIN__ = .;
         *(.data)
-    } > mem
+    } > ram AT> rom
 
     /* Small initialised data. */
     .sdata : ALIGN(4)
@@ -51,7 +54,7 @@ SECTIONS
         __SDATA_BEGIN__ = .;
         *(.srodata.cst16) *(.srodata.cst8) *(.srodata.cst4) *(.srodata.cst2) *(.srodata .srodata.*)
         *(.sdata .sdata.* .gnu.linkonce.s.*)
-    } > mem
+    } > ram AT> rom
 
     _edata = .; PROVIDE (edata = .);
 
@@ -62,13 +65,13 @@ SECTIONS
     .sbss :
     {
         *(.sbss .sbss.* .gnu.linkonce.sb.*)
-    } > mem
+    } > ram
 
     /* Uninitialised data. */
     .bss (NOLOAD) :
     {
         *(.bss .bss.* .gnu.linkonce.b.*)
-    } > mem
+    } > ram
 
     /DISCARD/ :
     {

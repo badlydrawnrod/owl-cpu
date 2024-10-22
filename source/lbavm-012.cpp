@@ -120,10 +120,9 @@ int main(int argc, char* argv[])
 
         std::cout << "Running RISC-V encoded instructions...\n";
         RunRv32i(image);
-        // RunAndTraceRv32i(image);
 
-        // // Transcode it to Owl-2820.
-        // // TODO: we don't want to do this for the whole thing ... only for the code.
+        // Transcode it to Owl-2820.
+        // TODO: we don't want to do this for the whole thing ... only for the code.
         // auto owlImage = Rv32iToOwl(rv32iImage);
         // DisassembleOwl(owlImage);
         // std::ranges::copy(owlImage, image.begin());
