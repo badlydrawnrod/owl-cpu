@@ -55,6 +55,10 @@ SECTIONS
 
     _edata = .; PROVIDE (edata = .);
 
+    PROVIDE(_data_lma_start = LOADADDR(.data));
+    PROVIDE(_data_lma_end = LOADADDR(.data) + SIZEOF(.data) + SIZEOF(.sdata));
+    PROVIDE(_data_vma_start = ADDR(.data));
+
     /* Start of uninitialised data. */
     __bss_start = .;
 

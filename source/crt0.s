@@ -6,6 +6,9 @@ _start:
     .cfi_startproc
     .cfi_undefined ra
 
+    # Copy initialised data into RAM.
+    call    init_vma
+
     # Call main().
     li		a0,0        # a0 = argc = 0
     li		a1,0		# a1 = argv = NULL

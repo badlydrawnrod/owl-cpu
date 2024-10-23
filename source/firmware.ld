@@ -3,20 +3,11 @@ OUTPUT_FORMAT("elf32-littleriscv", "elf32-littleriscv", "elf32-littleriscv")
 OUTPUT_ARCH(riscv)
 ENTRY(_start)
 
-/* Configuration variables to be used by the MEMORY command. */
-ROM_START = 0x00000000;
-ROM_SIZE = 2K;
-RAM_START = 0x20000000;
-RAM_SIZE = 2K;
-
-/* The stack grows down from the end of RAM. */
-STACK_TOP = RAM_START + RAM_SIZE;
-
 /* Memory space definition. These blocks of memory will be used in the SECTIONS command. */
 MEMORY
 {
-    rom (rx)  : ORIGIN = ROM_START, LENGTH = ROM_SIZE
-    ram (!rx) : ORIGIN = RAM_START, LENGTH = RAM_SIZE
+    FLASH(rx) : ORIGIN = 0x00000000, LENGTH = 4K
+    RAM(!rx)  : ORIGIN = 0x20000000, LENGTH = 4K
 }
 
 SECTIONS
@@ -24,29 +15,31 @@ SECTIONS
     PROVIDE (__stack_top = STACK_TOP);
 
     /* Startup code */
-    .init ROM_START :
+    .init : ALIGN(4)
     {
         KEEP (*(SORT_NONE(.init)))
-    } > rom
+    } > FLASH
 
     /* Code. */
     .text : ALIGN(4)
     {
         *(.text)
-    } > rom
+    } > FLASH
+
+    PROVIDE (etext = .);
 
     /* Read-only data. */
     .rodata : ALIGN(4)
     {
         *(.rodata .rodata.* .gnu.linkonce.r.*)
-    } > rom
+    } > FLASH
 
     /* Initialised data. */
     .data : ALIGN(4)
     {
         __DATA_BEGIN__ = .;
         *(.data)
-    } > ram AT> rom
+    } > RAM AT> FLASH
 
     /* Small initialised data. */
     .sdata : ALIGN(4)
@@ -54,9 +47,16 @@ SECTIONS
         __SDATA_BEGIN__ = .;
         *(.srodata.cst16) *(.srodata.cst8) *(.srodata.cst4) *(.srodata.cst2) *(.srodata .srodata.*)
         *(.sdata .sdata.* .gnu.linkonce.s.*)
-    } > ram AT> rom
+    } > RAM AT> FLASH
 
     _edata = .; PROVIDE (edata = .);
+
+    _sidata = LOADADDR(.data);
+
+    PROVIDE(_data_lma_start = LOADADDR(.data));
+
+    PROVIDE(_data_lma_end = LOADADDR(.data) + SIZEOF(.data) + SIZEOF(.sdata));
+    PROVIDE(_data_vma_start = ADDR(.data));
 
     /* Start of uninitialised data. */
     __bss_start = .;
@@ -65,13 +65,13 @@ SECTIONS
     .sbss :
     {
         *(.sbss .sbss.* .gnu.linkonce.sb.*)
-    } > ram
+    } > RAM
 
     /* Uninitialised data. */
     .bss (NOLOAD) :
     {
         *(.bss .bss.* .gnu.linkonce.b.*)
-    } > ram
+    } > RAM
 
     /DISCARD/ :
     {
