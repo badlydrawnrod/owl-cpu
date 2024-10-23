@@ -6,8 +6,12 @@ _start:
     .cfi_startproc
     .cfi_undefined ra
 
-    # Copy initialised data into RAM.
-    call    init_vma
+    # TODO: turn off relaxations, set up the global pointer, re-enable relaxations.
+
+    # TODO: set the stack pointer.
+
+    # TODO: Copy initialised data into RAM.
+    # call    init_vma
 
     # Call main().
     li		a0,0        # a0 = argc = 0
