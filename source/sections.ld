@@ -15,20 +15,12 @@ Defines the following symbols:
 
 */
 
+/*
 OUTPUT_FORMAT("elf32-littleriscv", "elf32-littleriscv", "elf32-littleriscv")
 
 OUTPUT_ARCH(riscv)
 ENTRY(_start)
-
-/* Configuration variables to be used by the MEMORY command. */
-MEM_START = 0x00000000;
-MEM_SIZE = 4K;
-
-/* Memory space definition. These blocks of memory will be used in the SECTIONS command. */
-MEMORY
-{
-    RAM (rw) : ORIGIN = MEM_START, LENGTH = MEM_SIZE
-}
+*/
 
 SECTIONS
 {
