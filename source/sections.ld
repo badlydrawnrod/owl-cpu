@@ -4,12 +4,13 @@ A basic linker script.
 Defines the following symbols:
 
     __etext             The load address of the initialised data sections (`.data` and `.sdata).
+    __data_lma_start__  Alias for __etext.
     __data_start__      The address of the start of the initialised data sections in RAM.
     __data_end__        The address of the end of the initialised data sections in RAM.
     __bss_start__       The address of the start of the uninitialised data sections (`.sbss` and `.bss`) in RAM.
     __bss_end__         The address of the end of the uninitialised data sections in RAM.
     __end__             The start of the heap in RAM.
-    __heap_start__      The start of the heap in RAM.
+    __heap_start__      Alias for __end__.
     __stack             The address of the stack in RAM.
     __global_pointer$   The address of the global pointer in RAM.
 
