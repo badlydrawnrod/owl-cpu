@@ -1,15 +1,16 @@
-extern unsigned char _data_lma_start;
-extern unsigned char _data_lma_end;
-extern unsigned char _data_vma_start;
+extern unsigned char __data_start__;
+extern unsigned char __data_end__;
+extern unsigned char __data_lma_start__;
 
+ __attribute__ ((section (".init")))
 void init_vma(void)
 {
     // Copy the .data section from LMA to VMA if they differ.
-    unsigned char* dst = &_data_vma_start;
-    unsigned char* src = &_data_lma_start;
+    unsigned char* dst = &__data_start__;
+    unsigned char* src = &__data_lma_start__;
     if (src != dst)
     {
-        while (src < &_data_lma_end)
+        while (dst < &__data_end__)
         {
             *dst++ = *src++;
         }

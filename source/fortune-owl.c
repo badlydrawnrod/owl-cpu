@@ -82,8 +82,8 @@ static char* aphorisms[] = {
 };
 
 // Initialised data.
-static int intInSData = 0x12345678;      // This is in the .`sdata` section.
-static int arrayInData[] = {1, 2, 3, 4}; // This is in the `.data` section.
+static int intInSData = 0x12345678;                  // This is in the .`sdata` section.
+static int arrayInData[] = {0, 1, 2, 3, 4, 5, 6, 7}; // This is in the `.data` section.
 
 // Uninitialised data.
 static int intVal;       // This is in the `.sbss` section.
@@ -139,12 +139,21 @@ int main()
     puts(aphorisms[i]);
     display(i);
 
-    // TODO: Demonstrate `.data` and `.sdata` (initialised data).
+    // Demonstrate `.data` and `.sdata` (initialised data).
+    if (intInSData != 0x12345678)
+    {
+        puts("Failed to initialise sdata");
+    }
+
     // The compiler can't optimize this away because it doesn't know what `random()` is going to
     // return.
     intInSData += random(size);
     for (int j = 0; j < sizeof(arrayInData) / sizeof(int); j++)
     {
+        if (arrayInData[j] != j)
+        {
+            puts("Failed to initialise data");
+        }
         arrayInData[j] += intInSData;
         intInSData += random(arrayInData[j]);
     }

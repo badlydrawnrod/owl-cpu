@@ -10,8 +10,8 @@ _start:
 
     # TODO: set the stack pointer.
 
-    # TODO: Copy initialised data into RAM.
-    # call    init_vma
+    # Copy initialised data into RAM.
+    call    init_vma
 
     # Call main().
     li		a0,0        # a0 = argc = 0

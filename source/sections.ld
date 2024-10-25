@@ -15,39 +15,32 @@ Defines the following symbols:
 
 */
 
-/*
-OUTPUT_FORMAT("elf32-littleriscv", "elf32-littleriscv", "elf32-littleriscv")
-
-OUTPUT_ARCH(riscv)
-ENTRY(_start)
-*/
-
 SECTIONS
 {
     /* Startup code. */
     .init : ALIGN(4)
     {
         KEEP (*(SORT_NONE(.init)))
-    } > RAM /* TODO: use an alias */
+    } > REGION_TEXT
 
     /* Code. */
     .text : ALIGN(4)
     {
         *(.text)
-    } > RAM /* TODO: use an alias */
+    } > REGION_TEXT
 
     /* Read-only data. */
     .rodata : ALIGN(4)
     {
         *(.rodata .rodata.* .gnu.linkonce.r.*)
-    } > RAM /* TODO: use an alias */
+    } > REGION_RODATA
 
     /* Initialised data. */
     .data : ALIGN(4)
     {
         __data_start__ = .;
         *(.data)
-    } > RAM /* TODO: use an alias */
+    } > REGION_DATA AT> REGION_RODATA
 
     /* Small initialised data. */
     .sdata : ALIGN(4)
@@ -55,24 +48,25 @@ SECTIONS
         __sdata_start__ = .;
         *(.srodata.cst16) *(.srodata.cst8) *(.srodata.cst4) *(.srodata.cst2) *(.srodata .srodata.*)
         *(.sdata .sdata.* .gnu.linkonce.s.*)
-    } > RAM /* TODO: use an alias */
+    } > REGION_DATA AT> REGION_RODATA
     
     __data_end__ = .;
 
     __etext = LOADADDR(.data);
+    __data_lma_start__ = LOADADDR(.data);
 
     /* Small uninitialised data. */
     .sbss (NOLOAD) : ALIGN(4)
     {
         __bss_start__ = .;
         *(.sbss .sbss.* .gnu.linkonce.sb.*)
-    } > RAM /* TODO: use an alias */
+    } > REGION_BSS
 
     /* Uninitialised data. */
     .bss (NOLOAD) : ALIGN(4)
     {
         *(.bss .bss.* .gnu.linkonce.b.*)
-    } > RAM /* TODO: use an alias */
+    } > REGION_BSS
 
     __bss_end__ = .;
 
