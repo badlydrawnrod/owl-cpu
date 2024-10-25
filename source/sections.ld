@@ -51,6 +51,7 @@ SECTIONS
         *(.sdata .sdata.* .gnu.linkonce.s.*)
     } > REGION_DATA AT> REGION_RODATA
     
+    . = ALIGN(4);
     __data_end__ = .;
 
     __etext = LOADADDR(.data);
@@ -69,6 +70,7 @@ SECTIONS
         *(.bss .bss.* .gnu.linkonce.b.*)
     } > REGION_BSS
 
+    . = ALIGN(4);
     __bss_end__ = .;
 
     /DISCARD/ :

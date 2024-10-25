@@ -82,8 +82,9 @@ static char* aphorisms[] = {
 };
 
 // Initialised data.
-static int intInSData = 0x12345678;                  // This is in the .`sdata` section.
+static int intInSData = 0x12345678;                  // This is in the `.sdata` section.
 static int arrayInData[] = {0, 1, 2, 3, 4, 5, 6, 7}; // This is in the `.data` section.
+static char x = 'x';                                 // This is in the `.sdata` section.
 
 // Uninitialised data.
 static int intVal;       // This is in the `.sbss` section.
@@ -156,6 +157,7 @@ int main()
         }
         arrayInData[j] += intInSData;
         intInSData += random(arrayInData[j]);
+        x += random(10);
     }
     intVal = arrayInData[random(sizeof(arrayInData) / sizeof(int))];
 
@@ -166,73 +168,5 @@ int main()
     }
     puts(aphorisms[dieRolls[random(10)]]);
 
-    return intInSData + intVal;
+    return intInSData + intVal + x;
 }
-
-/*
-
-If this doesn't motivate a linker script then I don't know what will.
-
-$ clang -Os --target=riscv32 -march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nodefaultlibs \
-        .\source\crt0.s .\source\fortune-owl.c -fuse-ld=lld \
-        "-Wl,--gc-sections" \
-        "-Wl,--section-start=.init=0" \
-        "-Wl,--section-start=.text=100" \
-        "-Wl,--section-start=.rodata=400" \
-        "-Wl,--section-start=.sdata=600" \
-        "-Wl,--section-start=.data=680" \
-        "-Wl,--section-start=.sbss=700" \
-        "-Wl,--section-start=.bss=780
-
-
-$ llvm-objdump.exe -h a.out
-
-a.out:  file format elf32-littleriscv
-
-Sections:
-Idx Name              Size     VMA      Type
-  0                   00000000 00000000
-  1 .init             0000001c 00000000 TEXT
-  2 .text             00000238 00000100 TEXT
-  3 .rodata           000001df 00000400 DATA
-  4 .sdata            00000004 00000600 DATA
-  5 .data             00000010 00000680 DATA
-  6 .sbss             00000004 00000700 BSS
-  7 .bss              00000028 00000780 BSS
-  8 .eh_frame         0000002c 000017a8 DATA
-  9 .riscv.attributes 0000001c 00000000
- 10 .comment          00000029 00000000
- 11 .symtab           00000180 00000000
- 12 .shstrtab         0000006c 00000000
- 13 .strtab           00000090 00000000
-
-Don't extract .sbss or .bss as they're NOLOAD sections, i.e., we don't want to copy them into the
-image. However, we're currently at the mercy of the VM itself to zero them.
-
-$ llvm-objcopy a.out -O binary a.bin -j .init -j .text -j .rodata -j .sdata -j .data
-
-Using a very, very simple linker script.
-
-$ clang -Os --target=riscv32 -march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nodefaultlibs \
-        .\source\crt0.s .\source\fortune-owl.c -fuse-ld=lld "-Wl,--gc-sections" -T.\source\basic.ld
-
-$ llvm-objdump.exe -h a.out
-
-a.out:  file format elf32-littleriscv
-
-Sections:
-Idx Name              Size     VMA      Type
-  0                   00000000 00000000
-  1 .init             0000001c 00000000 TEXT
-  2 .text             00000238 0000001c TEXT
-  3 .rodata           000001df 00000254 DATA
-  4 .data             00000010 00000434 DATA
-  5 .sdata            00000004 00000444 DATA
-  6 .sbss             00000004 00000448 BSS
-  7 .bss              00000028 0000044c BSS
-  8 .riscv.attributes 0000001c 00000000
-  9 .comment          00000029 00000000
- 10 .symtab           00000220 00000000
- 11 .shstrtab         00000062 00000000
- 12 .strtab           00000102 00000000
-*/
