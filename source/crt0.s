@@ -9,13 +9,16 @@ _start:
     # Set the global pointer.
 .option push
 .option norelax
-    la gp, __global_pointer$
+    la      gp, __global_pointer$
 .option pop
 
-    # TODO: set the stack pointer.
+    # Set the stack pointer.
+    la      sp, __stack
 
     # Copy initialised data into RAM.
     call    init_vma
+
+    # TODO: clear BSS.
 
     # Call main().
     li		a0, 0       # a0 = argc = 0
@@ -24,6 +27,7 @@ _start:
     call    main
 
     # Exit.
+                        # a0 = return code from main()
     li      a7, 0       # a7 = syscall number (0 is exit)
     ecall               # do a syscall. There's no coming back from this one.
 
