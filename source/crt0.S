@@ -42,9 +42,9 @@ bss_fill_test:
 
     # Call main().
 run_main:
-    li		a0, 0       # a0 = argc = 0
-    li		a1, 0		# a1 = argv = NULL
-    li		a2, 0		# a2 = envp = NULL
+    li      a0, 0       # a0 = argc = 0
+    li      a1, 0       # a1 = argv = NULL
+    li      a2, 0       # a2 = envp = NULL
     call    main
 
     # Exit.
