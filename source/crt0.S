@@ -17,7 +17,6 @@ _start:
 
 #if USE_FLASH
     # Copy initialised data into RAM.
-    # call    init_vma
     la      a1, __data_lma_start__
     la      a2, __data_start__
     la      a3, __data_end__
@@ -39,10 +38,10 @@ bss_fill_loop:
     sw      zero, (a1)
     addi    a1, a1, 4
 bss_fill_test:
-    bne     a1, a2, bss_fill_loop    
+    bne     a1, a2, bss_fill_loop
 
     # Call main().
-run_main:    
+run_main:
     li		a0, 0       # a0 = argc = 0
     li		a1, 0		# a1 = argv = NULL
     li		a2, 0		# a2 = envp = NULL
