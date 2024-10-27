@@ -3,7 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Read only data. The strings, and the array itself, go into the `.rodata` section.
+// Read only data.
+// The strings, and the array itself, are in the `.rodata` section.
 static char* aphorisms[] = {
         "Absence makes the heart grow fonder.",
         "A chain is only as strong as its weakest link.",
@@ -28,6 +29,7 @@ static int dieRolls[10]; // This is in the `.bss` section.
 
 static void display(int i)
 {
+    // The jump table for this switch statement is in the `.rodata` section.
     switch (i)
     {
     case 0:
@@ -68,29 +70,67 @@ static void display(int i)
 
 int main()
 {
+    // Confirm that `.sdata` contains the expected values.
+    if ((x != 'x') || (intInSData != 0x12345678))
+    {
+        puts("ERROR: Failed to initialise .sdata");
+        return -1;
+    }
+
+    // Confirm that `.data` contains the expected values.
+    for (int i = 0; i < sizeof(arrayInData) / sizeof(int); i++)
+    {
+        if (arrayInData[i] != i)
+        {
+            puts("ERROR: Failed to initialise .data");
+            return -1;
+        }
+    }
+
+    // Confirm that `.sbss` has been zeroed.
+    if (intVal != 0)
+    {
+        puts("ERROR: failed to zero .sbss");
+        return -1;
+    }
+
+    // Confirm that `.bss` has been zeroed.
+    for (int i = 0; i < sizeof(dieRolls) / sizeof(dieRolls[0]); i++)
+    {
+        if (dieRolls[i] != 0)
+        {
+            puts("ERROR: failed to zero .bss");
+            return -1;
+        }
+    }
+
+    const size_t size = sizeof(aphorisms) / sizeof(char*);
+
+    // Confirm that the array and strings can be read from `.rodata`.
+    for (int i = 0; i < size; i++)
+    {
+        puts(aphorisms[i]);
+    }
+    puts("");
+
+    // Confirm that the switch statement's jump table can be read from `.rodata`.
     randomize();
-    size_t size = sizeof(aphorisms) / sizeof(char*);
+    for (int i = 0; i < size; i++)
+    {
+        display(random(size));
+    }
+    puts("");
 
     // Demonstrate `.rodata` (read-only data).
-    uint32_t i = random(size);
-    puts(aphorisms[i]);
-    display(i);
-
-    // Demonstrate `.data` and `.sdata` (initialised data).
-    if (intInSData != 0x12345678)
-    {
-        puts("Failed to initialise sdata");
-    }
+    uint32_t n = random(size);
+    puts(aphorisms[n]);
+    display(n);
 
     // The compiler can't optimize this away because it doesn't know what `random()` is going to
     // return.
     intInSData += random(size);
     for (int j = 0; j < sizeof(arrayInData) / sizeof(int); j++)
     {
-        if (arrayInData[j] != j)
-        {
-            puts("Failed to initialise data");
-        }
         arrayInData[j] += intInSData;
         intInSData += random(arrayInData[j]);
         x += random(10);
