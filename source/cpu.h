@@ -56,8 +56,6 @@ enum Syscall
 
 class OwlCpu
 {
-    // TODO: remove public. This is for debugging purposes.
-public:
     uint32_t pc = 0;             // The program counter.
     uint32_t nextPc = 0;         // The address of the next instruction.
     uint32_t x[32] = {};         // The integer registers.
@@ -72,6 +70,11 @@ public:
     {
         // Set the stack pointer to the end of memory.
         x[sp] = uint32_t(memory.size());
+    }
+
+    uint32_t Pc() const
+    {
+        return pc;
     }
 
     bool Done() const
@@ -108,7 +111,7 @@ public:
             break;
 
         case Syscall::Random:
-            // TODO: Again, do *not* try this at home. What if a0 is zero?
+            // TODO: Do *not* try this at home. What if a0 contains zero?
             x[a0] = std::rand() % x[a0];
             break;
 

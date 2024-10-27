@@ -41,7 +41,7 @@ void RunAndTraceRv32i(std::span<uint32_t> image)
     while (!cpu.Done())
     {
         const uint32_t ins = cpu.Fetch();
-        std::cout << std::format("{:08x}: {:20}\n", cpu.pc, DispatchRv32i(d, ins));
+        std::cout << std::format("{:08x}: {:20}\n", cpu.Pc(), DispatchRv32i(d, ins));
         DispatchRv32i(cpu, ins);
     }
 }
