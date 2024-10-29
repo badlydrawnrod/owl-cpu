@@ -70,6 +70,12 @@ static void display(int i)
 
 int main()
 {
+    // These values are always 0 and 1. The compiler doesn't know that, which means that it won't
+    // optimize `.sdata` and `.data` out of existence.
+    randomize();
+    const uint32_t zero = random(1);
+    const uint32_t one = 1 + zero;
+
     // Confirm that `.sdata` contains the expected values.
     if ((x != 'x') || (intInSData != 0x12345678))
     {
@@ -77,10 +83,30 @@ int main()
         return 1;
     }
 
+    // Confirm that `.sdata` can be written to.
+    x += (char)one;
+    intInSData += one;
+    if ((x != 'y') || (intInSData != 0x12345679))
+    {
+        puts("ERROR: Failed to write to .sdata");
+        return 1;
+    }
+
     // Confirm that `.data` contains the expected values.
     for (int i = 0; i < sizeof(arrayInData) / sizeof(int); i++)
     {
         if (arrayInData[i] != i)
+        {
+            puts("ERROR: Failed to initialise .data");
+            return 1;
+        }
+    }
+
+    // Confirm that `.data` can be written to.
+    for (int i = 0; i < sizeof(arrayInData) / sizeof(int); i++)
+    {
+        arrayInData[i] += one;
+        if (arrayInData[i] != (i + 1))
         {
             puts("ERROR: Failed to initialise .data");
             return 1;
@@ -114,7 +140,6 @@ int main()
     puts("");
 
     // Confirm that the switch statement's jump table can be read from `.rodata`.
-    randomize();
     for (int i = 0; i < numAphorisms; i++)
     {
         display(random(numAphorisms));
@@ -150,7 +175,6 @@ int main()
         puts("ERROR: failed to write to .sbss");
         return 1;
     }
-
 
     return 0;
 }
