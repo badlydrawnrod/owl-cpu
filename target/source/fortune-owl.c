@@ -74,7 +74,7 @@ int main()
     if ((x != 'x') || (intInSData != 0x12345678))
     {
         puts("ERROR: Failed to initialise .sdata");
-        return -1;
+        return 1;
     }
 
     // Confirm that `.data` contains the expected values.
@@ -83,7 +83,7 @@ int main()
         if (arrayInData[i] != i)
         {
             puts("ERROR: Failed to initialise .data");
-            return -1;
+            return 1;
         }
     }
 
@@ -91,7 +91,7 @@ int main()
     if (intVal != 0)
     {
         puts("ERROR: failed to zero .sbss");
-        return -1;
+        return 1;
     }
 
     // Confirm that `.bss` has been zeroed.
@@ -100,14 +100,14 @@ int main()
         if (dieRolls[i] != 0)
         {
             puts("ERROR: failed to zero .bss");
-            return -1;
+            return 1;
         }
     }
 
-    const size_t size = sizeof(aphorisms) / sizeof(char*);
+    const size_t numAphorisms = sizeof(aphorisms) / sizeof(char*);
 
     // Confirm that the array and strings can be read from `.rodata`.
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < numAphorisms; i++)
     {
         puts(aphorisms[i]);
     }
@@ -115,34 +115,42 @@ int main()
 
     // Confirm that the switch statement's jump table can be read from `.rodata`.
     randomize();
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < numAphorisms; i++)
     {
-        display(random(size));
+        display(random(numAphorisms));
     }
     puts("");
 
-    // Demonstrate `.rodata` (read-only data).
-    uint32_t n = random(size);
-    puts(aphorisms[n]);
-    display(n);
+    // TODO: Demonstrate that `.rodata` is actually read-only.
 
-    // The compiler can't optimize this away because it doesn't know what `random()` is going to
-    // return.
-    intInSData += random(size);
-    for (int j = 0; j < sizeof(arrayInData) / sizeof(int); j++)
+    // Write to `.bss`.
+    const size_t numDieRolls = sizeof(dieRolls) / sizeof(dieRolls[0]);
+    for (int i = 0; i < numDieRolls; i++)
     {
-        arrayInData[j] += intInSData;
-        intInSData += random(arrayInData[j]);
-        x += random(10);
+        dieRolls[i] = (i + 1) * 10; // Deliberately non-zero.
     }
-    intVal = arrayInData[random(sizeof(arrayInData) / sizeof(int))];
 
-    // TODO: Demonstrate `.bss` and `.sbss` (uninitialised data).
-    for (int j = 0; j < 10; j++)
+    // Confirm that `.bss` contains the expected values.
+    for (int i = 0; i < numDieRolls; i++)
     {
-        dieRolls[j] = random(6);
+        if (dieRolls[i] != (i + 1) * 10)
+        {
+            puts("ERROR: failed to write to .bss");
+            return 1;
+        }
     }
-    puts(aphorisms[dieRolls[random(10)]]);
 
-    return intInSData + intVal + x;
+    // Write to `.sbss`.
+    uint32_t n = random(numDieRolls);
+    intVal = dieRolls[n];
+
+    // Confirm that `.sbss` contains the expected value.
+    if (intVal != dieRolls[n])
+    {
+        puts("ERROR: failed to write to .sbss");
+        return 1;
+    }
+
+
+    return 0;
 }
