@@ -129,6 +129,7 @@ int main(int argc, char* argv[])
 
         // std::cout << "\nRunning Owl-2820 encoded instructions...\n";
         // Run(image);
+        std::cout << "Done\n";
     }
     catch (const std::exception& e)
     {

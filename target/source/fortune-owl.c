@@ -146,8 +146,6 @@ int main()
     }
     puts("");
 
-    // TODO: Demonstrate that `.rodata` is actually read-only.
-
     // Write to `.bss`.
     const size_t numDieRolls = sizeof(dieRolls) / sizeof(dieRolls[0]);
     for (int i = 0; i < numDieRolls; i++)
@@ -176,5 +174,11 @@ int main()
         return 1;
     }
 
+    // Demonstrating that `.rodata` is actually read-only is trickier than you might think, because
+    // the compiler can be too clever. So instead, we just try to write to a read-only segment.
+    char* p = (char*)random(0x800);
+    *p = random(256); // Kaboom.
+
+    // Never gets here, because we've just tried to write to a read-only segment.
     return 0;
 }
