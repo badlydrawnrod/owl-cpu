@@ -34,18 +34,6 @@ void RunRv32i(std::span<uint32_t> image)
     }
 }
 
-void RunAndTraceRv32i(std::span<uint32_t> image)
-{
-    OwlCpu cpu(image);
-    Disassembler d;
-    while (!cpu.Done())
-    {
-        const uint32_t ins = cpu.Fetch();
-        std::cout << std::format("{:08x}: {:20}\n", cpu.Pc(), DispatchRv32i(d, ins));
-        DispatchRv32i(cpu, ins);
-    }
-}
-
 std::vector<uint32_t> Rv32iToOwl(std::span<uint32_t> image)
 {
     Assembler a;
@@ -70,10 +58,10 @@ void DisassembleOwl(std::span<uint32_t> image)
     }
 }
 
-void DisassembleRv32i(std::span<uint32_t> image, uint32_t textStart)
+void DisassembleRv32i(std::span<uint32_t> image)
 {
     Disassembler d;
-    uint32_t address = textStart;
+    uint32_t address = 0;
     for (auto code : image)
     {
         if (code != 0)
@@ -120,7 +108,7 @@ int main(int argc, char* argv[])
                                      textSize / sizeof(uint32_t));
 
         std::cout << "Disassembling RISC-V encoded instructions...\n";
-        DisassembleRv32i(rv32iText, textStart);
+        DisassembleRv32i(rv32iText);
 
         // Copy the entire loaded image into the memory image.
         std::ranges::copy(rv32iImage, image.begin());

@@ -20,14 +20,14 @@ _start:
     la      a1, __data_lma_start__
     la      a2, __data_start__
     la      a3, __data_end__
-    j       data_fill_test
-data_fill_loop:
+    j       data_copy_test
+data_copy_loop:
     lw      a0, (a1)
     sw      a0, (a2)
     addi    a1, a1, 4
     addi    a2, a2, 4
-data_fill_test:
-    bne     a2, a3, data_fill_loop
+data_copy_test:
+    bne     a2, a3, data_copy_loop
 #endif
 
     # Clear BSS.
