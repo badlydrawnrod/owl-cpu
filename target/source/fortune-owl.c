@@ -176,8 +176,8 @@ int main()
 
     // Demonstrating that `.rodata` is actually read-only is trickier than you might think, because
     // the compiler can be too clever. So instead, we just try to write to a read-only segment.
-    char* p = (char*)random(0x800);
-    *p = random(256); // Kaboom.
+    // char* p = (char*)random(0x800);
+    // *p = random(256); // Kaboom.
 
     // Never gets here, because we've just tried to write to a read-only segment.
     return 0;

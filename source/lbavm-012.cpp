@@ -112,26 +112,34 @@ int main(int argc, char* argv[])
 
         auto rv32iImage = LoadRv32iImage(argv[1]);
 
-        // Hardcoded values for the text region (`.init` + `.text`).
+        // Find the code in the loaded image, i.e., in the TEXT sections `.init` and `.text`.
+        // TODO: don't use hardcoded values.
         const uint32_t textStart = 0;
-        const uint32_t textSize = 0x414;
-        std::span<uint32_t> rv32Text(rv32iImage.begin() + textStart / sizeof(uint32_t),
+        const uint32_t textSize = 0x3f0;
+        std::span<uint32_t> rv32iText(rv32iImage.begin() + textStart / sizeof(uint32_t),
                                      textSize / sizeof(uint32_t));
-        DisassembleRv32i(rv32Text, textStart);
 
+        std::cout << "Disassembling RISC-V encoded instructions...\n";
+        DisassembleRv32i(rv32iText, textStart);
+
+        // Copy the entire loaded image into the memory image.
         std::ranges::copy(rv32iImage, image.begin());
 
         std::cout << "Running RISC-V encoded instructions...\n";
-        // RunRv32i(image);
+        RunRv32i(image);
 
-        // Transcode it to Owl-2820.
-        // TODO: we don't want to do this for the whole thing ... only for the code.
-        auto owlText = Rv32iToOwl(rv32Text);
+        // Transcode the code part of the image to Owl-2820.
+        auto owlText = Rv32iToOwl(rv32iText);
+
+        std::cout << "Disassembling Owl-2820 encoded instructions...\n";
         DisassembleOwl(owlText);
+
+        // Overwrite the code part of the loaded image with the Owl-encoded code.
         std::ranges::copy(owlText, image.begin());
 
         std::cout << "\nRunning Owl-2820 encoded instructions...\n";
         Run(image);
+
         std::cout << "Done\n";
     }
     catch (const std::exception& e)
