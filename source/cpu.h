@@ -473,16 +473,20 @@ public:
     // lui r0, uimm20
     void Lui(uint32_t r0, uint32_t uimm20)
     {
-        // r0 <- uimm20 & 0xfffff000
-        x[r0] = uimm20;
+        // uimm20 is assumed to have been decoded to the 20 least significant bits so we have to
+        // shift it back up again.
+        // r0 <- (uimm20 << 12) & 0xfffff000
+        x[r0] = (uimm20 << 12);
         x[0] = 0; // Ensure x0 is always zero.
     }
 
     // auipc r0, uimm20
     void Auipc(uint32_t r0, uint32_t uimm20)
     {
-        // r0 <- pc + (uimm20 & 0xfffff000)
-        x[r0] = pc + uimm20;
+        // uimm20 is assumed to have been decoded to the 20 least significant bits so we have to
+        // shift it back up again.
+        // r0 <- pc + ((uimm20 << 12) & 0xfffff000)
+        x[r0] = pc + (uimm20 << 12);
         x[0] = 0; // Ensure x0 is always zero.
     }
 

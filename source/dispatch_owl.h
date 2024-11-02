@@ -44,7 +44,7 @@ namespace decode
 
     inline uint32_t uimm20(const uint32_t ins)
     {
-        return ins & 0xfffff000;
+        return (ins & 0xfffff000) >> 12;
     }
 } // namespace decode
 

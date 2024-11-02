@@ -67,7 +67,7 @@ public:
 
     auto Uimmediate() const -> uint32_t
     {
-        return ins_ & 0xfffff000; // ins[31:12] -> imm[31:12]
+        return (ins_ & 0xfffff000) >> 12; // ins[31:12] -> imm[19:0]
     }
 };
 
