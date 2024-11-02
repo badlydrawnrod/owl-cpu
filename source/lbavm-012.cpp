@@ -70,10 +70,10 @@ void DisassembleOwl(std::span<uint32_t> image)
     }
 }
 
-void DisassembleRv32i(std::span<uint32_t> image)
+void DisassembleRv32i(std::span<uint32_t> image, uint32_t textStart)
 {
     Disassembler d;
-    uint32_t address = 0;
+    uint32_t address = textStart;
     for (auto code : image)
     {
         if (code != 0)
@@ -106,29 +106,32 @@ int main(int argc, char* argv[])
             return 2;
         }
 
-        // Create an 4K memory image.
-        constexpr size_t memorySize = 4096;
+        // Create a memory image.
+        constexpr size_t memorySize = romSize + ramSize;
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
         auto rv32iImage = LoadRv32iImage(argv[1]);
 
-        // TODO: we currently don't know what's code and what's data so we get garbage for some of
-        // it.
-        // DisassembleRv32i(rv32iImage);
+        // Hardcoded values for the text region (`.init` + `.text`).
+        const uint32_t textStart = 0;
+        const uint32_t textSize = 0x414;
+        std::span<uint32_t> rv32Text(rv32iImage.begin() + textStart / sizeof(uint32_t),
+                                     textSize / sizeof(uint32_t));
+        DisassembleRv32i(rv32Text, textStart);
 
         std::ranges::copy(rv32iImage, image.begin());
 
         std::cout << "Running RISC-V encoded instructions...\n";
-        RunRv32i(image);
+        // RunRv32i(image);
 
         // Transcode it to Owl-2820.
         // TODO: we don't want to do this for the whole thing ... only for the code.
-        // auto owlImage = Rv32iToOwl(rv32iImage);
-        // DisassembleOwl(owlImage);
-        // std::ranges::copy(owlImage, image.begin());
+        auto owlText = Rv32iToOwl(rv32Text);
+        DisassembleOwl(owlText);
+        std::ranges::copy(owlText, image.begin());
 
-        // std::cout << "\nRunning Owl-2820 encoded instructions...\n";
-        // Run(image);
+        std::cout << "\nRunning Owl-2820 encoded instructions...\n";
+        Run(image);
         std::cout << "Done\n";
     }
     catch (const std::exception& e)

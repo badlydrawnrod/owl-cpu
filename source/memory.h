@@ -9,12 +9,15 @@
 
 using Memory = std::span<std::byte>;
 
+constexpr uint32_t romStart = 0x0u;
+constexpr uint32_t romSize = 0x4000;
+constexpr uint32_t ramStart = 0x4000;
+constexpr uint32_t ramSize = 0x4000;
+
 template<uint32_t sz>
     requires(sz == 1) || (sz == 2) || (sz == 4)
 inline bool IsReadable(uint32_t addr)
 {
-    constexpr uint32_t romStart = 0x0u;
-    constexpr uint32_t romSize = 0x800u;
 
     return addr >= romStart && addr <= romStart + romSize + sz;
 }
@@ -23,8 +26,6 @@ template<uint32_t sz>
     requires(sz == 1) || (sz == 2) || (sz == 4)
 inline bool IsWritable(uint32_t addr)
 {
-    constexpr uint32_t ramStart = 0x800u;
-    constexpr uint32_t ramSize = 0x800u;
 
     return addr >= ramStart && addr <= ramStart + ramSize + sz;
 }

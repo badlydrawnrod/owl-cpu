@@ -7,8 +7,8 @@ ENTRY(_start)
 /* Memory space definition. These blocks of memory will be used in the SECTIONS command. */
 MEMORY
 {
-    FLASH (rx) : ORIGIN = 0, LENGTH = 2K
-    RAM  (!rx) : ORIGIN = 2K, LENGTH = 2K
+    FLASH (rx) : ORIGIN = 0, LENGTH = 16K
+    RAM  (!rx) : ORIGIN = 16K, LENGTH = 16K
 }
 
 REGION_ALIAS("REGION_TEXT", FLASH)
