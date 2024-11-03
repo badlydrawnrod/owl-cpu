@@ -78,12 +78,13 @@ struct Elf32_Shdr
     uint32_t sh_entsize;
 };
 
+// All headers.
 struct Elf32_Headers
 {
-    Elf32_Ehdr ehdr;
-    std::vector<Elf32_Phdr> phdrs;
-    std::vector<Elf32_Shdr> shdrs;
-    std::vector<std::string> snames;
+    Elf32_Ehdr ehdr;               // ELF header.
+    std::vector<Elf32_Phdr> phdrs; // All program headers.
+    std::vector<Elf32_Shdr> shdrs; // All section headers.
+    std::vector<char> names;       // The string section.
 };
 
 enum class elf_errc
@@ -308,20 +309,32 @@ Elf32_Headers ReadElf(std::ifstream& ifs, uint32_t fileSize, elf_errc& err)
         shdrs.push_back(shdr);
     }
 
-    // Read the section names.
-    std::vector<std::string> snames;
-    shdrs.reserve(ehdr.e_shnum);
+    // Find the section header for the string section.
     const Elf32_Shdr& stringSection = shdrs[ehdr.e_shstrndx];
     const auto offset = stringSection.sh_offset;
-    for (auto& shdr : shdrs)
+    const auto size = stringSection.sh_size;
+
+    // Check that string indexes are within the string section.
+    for (const auto& shdr : shdrs)
     {
-        ifs.seekg(offset + shdr.sh_name);
-        std::string name;
-        std::getline(ifs, name, '\0');
-        snames.push_back(name);
+        if (shdr.sh_name >= size)
+        {
+            err = elf_errc::ER_BAD_ELF;
+            return {};
+        }
     }
-    
-    Elf32_Headers headers{.ehdr = ehdr, .phdrs = phdrs, .shdrs = shdrs, .snames = snames};
+
+    // Load the string section.
+    std::vector<char> names(size);
+    ifs.seekg(offset);
+    ifs.read(names.data(), size);
+    if (!ifs)
+    {
+        err = elf_errc::ER_IO_FAILED;
+        return {};
+    }
+
+    Elf32_Headers headers{.ehdr = ehdr, .phdrs = phdrs, .shdrs = shdrs, .names = names};
     return headers;
 }
 
@@ -380,6 +393,12 @@ int main()
             std::cout << std::format("\tp_filesz = {:08x}\n", phdr.p_filesz);
             std::cout << std::format("\t p_memsz = {:08x}\n", phdr.p_memsz);
         }
+    }
+
+    for (const auto& shdr : headers.shdrs)
+    {
+        std::string_view name(headers.names.data() + shdr.sh_name);
+        std::cout << "section name: " << name << '\n';
     }
 
     return 0;
