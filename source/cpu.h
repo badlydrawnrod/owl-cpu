@@ -72,6 +72,15 @@ public:
         x[sp] = uint32_t(memory.size());
     }
 
+    // Useful for when code has been transcoded, because it allows Fetch() to operate directly on
+    // code and ReadNNN() to operate on data.
+    OwlCpu(std::span<std::uint32_t> image, std::span<std::uint32_t> text)
+        : code{text}, memory{std::as_writable_bytes(image)}
+    {
+        // Set the stack pointer to the end of memory.
+        x[sp] = uint32_t(memory.size());
+    }
+
     uint32_t Pc() const
     {
         return pc;

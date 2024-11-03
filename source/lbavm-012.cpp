@@ -14,9 +14,9 @@
 #include <span>
 #include <vector>
 
-void Run(std::span<uint32_t> image)
+void Run(std::span<uint32_t> image, std::span<uint32_t> text)
 {
-    OwlCpu cpu(image);
+    OwlCpu cpu(image, text);
     while (!cpu.Done())
     {
         const uint32_t ins = cpu.Fetch();
@@ -122,11 +122,8 @@ int main(int argc, char* argv[])
         std::cout << "Disassembling Owl-2820 encoded instructions...\n";
         DisassembleOwl(owlText);
 
-        // Overwrite the code part of the loaded image with the Owl-encoded code.
-        std::ranges::copy(owlText, image.begin());
-
         std::cout << "\nRunning Owl-2820 encoded instructions...\n";
-        Run(image);
+        Run(image, owlText);
 
         std::cout << "Done\n";
     }
