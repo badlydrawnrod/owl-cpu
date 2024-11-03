@@ -200,26 +200,26 @@ void ReadElf(std::ifstream& ifs, uint32_t fileSize)
             const auto& flags = phdr.p_flags;
             if (flags == (PF_R | PF_X))
             {
-                type = "TEXT";
+                type = "TEXT (r-x)";
             }
             else if (flags == PF_R && phdr.p_filesz != 0)
             {
-                type = "RODATA";
+                type = "RODATA (r--)";
             }
             else if (flags == (PF_R | PF_W) && phdr.p_filesz != 0)
             {
-                type = "DATA";
+                type = "DATA (rw-)";
             }
             else if (flags == (PF_R | PF_W) && phdr.p_filesz == 0)
             {
-                type = "BSS";
+                type = "BSS (rw-)";
             }
             else
             {
                 type = "UNKNOWN";
             }
 
-            std::cout << std::format("Found loadable {} segment at {:08x}\n", type, phdr.p_offset);
+            std::cout << std::format("Found loadable {} segment at p_offset = {:08x}\n", type, phdr.p_offset);
             std::cout << std::format("\t p_paddr = {:08x}\n", phdr.p_paddr);
             std::cout << std::format("\t p_vaddr = {:08x}\n", phdr.p_vaddr);
             std::cout << std::format("\tp_filesz = {:08x}\n", phdr.p_filesz);
