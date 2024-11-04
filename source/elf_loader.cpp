@@ -1,8 +1,11 @@
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <ranges>
+#include <span>
 #include <system_error>
 
 // ELF format references:
@@ -27,6 +30,17 @@
 #define PF_X 1
 #define PF_W 2
 #define PF_R 4
+
+#define SHT_NULL 0
+#define SHT_PROGBITS 1
+#define SHT_SYMTAB 2
+#define SHT_STRTAB 3
+#define SHT_NOBITS 8
+#define SHT_RISCV_ATTRIBUTES 0x70000003
+
+#define SHF_WRITE 0x01
+#define SHF_ALLOC 0x02
+#define SHF_EXECINST 0x04
 
 using Elf32_Addr = uint32_t;
 using Elf32_Off = uint32_t;
@@ -114,6 +128,26 @@ std::string to_string(elf_errc err)
         return "not supported";
     }
     return "unknown";
+}
+
+std::string to_string(uint32_t sh_type)
+{
+    switch (sh_type)
+    {
+    case SHT_NULL:
+        return "SHT_NULL";
+    case SHT_PROGBITS:
+        return "SHT_PROGBITS";
+    case SHT_SYMTAB:
+        return "SHT_SYMTAB";
+    case SHT_STRTAB:
+        return "SHT_STRTAB";
+    case SHT_NOBITS:
+        return "SHT_NOBITS";
+    case SHT_RISCV_ATTRIBUTES:
+        return "SHT_RISCV_ATTRIBUTES";
+    }
+    return std::format("{:08x}", sh_type);
 }
 
 Elf32_Ehdr ReadElfHeader(std::ifstream& ifs, uint32_t fileSize, elf_errc& err)
@@ -258,6 +292,46 @@ Elf32_Shdr ReadSectionHeader(std::ifstream& ifs, uint32_t fileSize, elf_errc& er
     return shdr;
 }
 
+void ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr, std::span<char> dst, elf_errc& err)
+{
+    // Is the destination big enough?
+    if (phdr.p_memsz > dst.size_bytes())
+    {
+        err = elf_errc::ER_INVALID_ARGUMENT;
+        return;
+    }
+
+    // Zero the destination up to p_memsz.
+    std::ranges::fill_n(dst.begin(), phdr.p_memsz, '\0');
+
+    // Copy data up to p_filesz (p_filesz <= p_memsz).
+    if (phdr.p_filesz != 0)
+    {
+        ifs.seekg(phdr.p_offset);
+        ifs.read(dst.data(), phdr.p_filesz);
+    }
+}
+
+void ReadSection(std::ifstream& ifs, const Elf32_Shdr& shdr, std::span<char> dst, elf_errc& err)
+{
+    // Is the destination big enough?
+    if (shdr.sh_size > dst.size_bytes())
+    {
+        err = elf_errc::ER_INVALID_ARGUMENT;
+        return;
+    }
+
+    // Zero the destination up to sh_size.
+    std::ranges::fill_n(dst.begin(), shdr.sh_size, '\0');
+
+    // Copy data up to sh_size.
+    if (shdr.sh_size != 0 && shdr.sh_type != SHT_NOBITS)
+    {
+        ifs.seekg(shdr.sh_offset);
+        ifs.read(dst.data(), shdr.sh_size);
+    }
+}
+
 Elf32_Headers ReadElf(std::ifstream& ifs, uint32_t fileSize, elf_errc& err)
 {
     // Read the ELF header.
@@ -311,7 +385,6 @@ Elf32_Headers ReadElf(std::ifstream& ifs, uint32_t fileSize, elf_errc& err)
 
     // Find the section header for the string section.
     const Elf32_Shdr& stringSection = shdrs[ehdr.e_shstrndx];
-    const auto offset = stringSection.sh_offset;
     const auto size = stringSection.sh_size;
 
     // Check that string indexes are within the string section.
@@ -326,11 +399,9 @@ Elf32_Headers ReadElf(std::ifstream& ifs, uint32_t fileSize, elf_errc& err)
 
     // Load the string section.
     std::vector<char> names(size);
-    ifs.seekg(offset);
-    ifs.read(names.data(), size);
-    if (!ifs)
+    ReadSection(ifs, stringSection, names, err);
+    if (err != elf_errc::ER_OK)
     {
-        err = elf_errc::ER_IO_FAILED;
         return {};
     }
 
@@ -338,9 +409,71 @@ Elf32_Headers ReadElf(std::ifstream& ifs, uint32_t fileSize, elf_errc& err)
     return headers;
 }
 
+class ElfLoader
+{
+public:
+    ElfLoader(const char* path) : ifs_(path, std::ios::binary | std::ios::ate)
+    {
+        auto fileSize = ifs_.tellg();
+        ifs_.seekg(0);
+        if (!ifs_)
+        {
+            err_ = elf_errc::ER_IO_FAILED;
+            return;
+        }
+
+        headers_ = ReadElf(ifs_, fileSize, err_);
+    }
+
+    const Elf32_Ehdr& ElfHeader() const
+    {
+        return headers_.ehdr;
+    }
+
+    const std::vector<Elf32_Phdr>& ProgramHeaders() const
+    {
+        return headers_.phdrs;
+    }
+
+    const std::vector<Elf32_Shdr>& SectionHeaders() const
+    {
+        return headers_.shdrs;
+    }
+
+    void ReadSegment(size_t num, std::span<char> dst, elf_errc& err)
+    {
+        if (num >= headers_.phdrs.size())
+        {
+            err = elf_errc::ER_INVALID_ARGUMENT;
+            return;
+        }
+
+        const Elf32_Phdr& phdr = headers_.phdrs[num];
+        ::ReadSegment(ifs_, phdr, dst, err);
+    }
+
+    void ReadSection(size_t num, std::span<char> dst, elf_errc& err)
+    {
+        if (num >= headers_.shdrs.size())
+        {
+            err = elf_errc::ER_INVALID_ARGUMENT;
+            return;
+        }
+
+        const Elf32_Shdr& shdr = headers_.shdrs[num];
+        ::ReadSection(ifs_, shdr, dst, err);
+    }
+
+private:
+    elf_errc err_{}; // TODO: decide how to handle errors once and for all.
+    std::ifstream ifs_;
+    Elf32_Headers headers_{};
+};
+
 int main()
 {
     const char path[] = "../../target/out/a.out";
+
     std::ifstream elfStream(path, std::ios::binary | std::ios::ate);
     if (!elfStream)
     {
@@ -358,6 +491,8 @@ int main()
         return 1;
     }
 
+    // Display the program headers.
+    std::cout << "Program Headers:\n";
     for (const auto& phdr : headers.phdrs)
     {
         if (phdr.p_type == PT_LOAD)
@@ -386,8 +521,8 @@ int main()
                 type = "UNKNOWN";
             }
 
-            std::cout << std::format("Found loadable {} segment at p_offset = {:08x}\n", type,
-                                     phdr.p_offset);
+            std::cout << std::format("Found loadable {} segment\n", type);
+            std::cout << std::format("\tp_offset = {:08x}\n", phdr.p_offset);
             std::cout << std::format("\t p_paddr = {:08x}\n", phdr.p_paddr);
             std::cout << std::format("\t p_vaddr = {:08x}\n", phdr.p_vaddr);
             std::cout << std::format("\tp_filesz = {:08x}\n", phdr.p_filesz);
@@ -395,10 +530,18 @@ int main()
         }
     }
 
+    // Display the section headers.
+    std::cout << "\nSection Headers:\n";
     for (const auto& shdr : headers.shdrs)
     {
         std::string_view name(headers.names.data() + shdr.sh_name);
         std::cout << "section name: " << name << '\n';
+        std::cout << std::format("\t  sh_flags = {:08x}\n", shdr.sh_flags);
+        std::cout << std::format("\t   sh_type = {}\n", to_string(shdr.sh_type));
+        std::cout << std::format("\t   sh_addr = {:08x}\n", shdr.sh_addr);
+        std::cout << std::format("\t sh_offset = {:08x}\n", shdr.sh_offset);
+        std::cout << std::format("\t   sh_size = {:08x}\n", shdr.sh_size);
+        std::cout << std::format("\t   sh_info = {:08x}\n", shdr.sh_info);
     }
 
     return 0;
