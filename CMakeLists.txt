@@ -6,5 +6,5 @@ target_compile_features(lbavm-012 PUBLIC cxx_std_20)
 set_target_properties(lbavm-012 PROPERTIES CXX_EXTENSIONS OFF)
 
 add_executable(elf-loader source/elf_loader.cpp)
-target_compile_features(elf-loader PUBLIC cxx_std_20)
+target_compile_features(elf-loader PUBLIC cxx_std_23)
 set_target_properties(elf-loader PROPERTIES CXX_EXTENSIONS OFF)
