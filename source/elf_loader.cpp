@@ -7,7 +7,7 @@
 #include <iostream>
 #include <ranges>
 #include <span>
-#include <system_error>
+#include <vector>
 
 // ELF format references:
 // https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
@@ -472,8 +472,8 @@ public:
     }
 
 private:
-    elf_errc err_{}; // TODO: decide how to handle errors once and for all.
-    std::ifstream ifs_;
+    elf_errc err_ = elf_errc::ER_OK;
+    std::ifstream ifs_{};
     Elf32_Headers headers_{};
 };
 
