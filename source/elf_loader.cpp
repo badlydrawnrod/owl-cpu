@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <expected>
+#include <format>
 #include <fstream>
 #include <span>
 #include <vector>

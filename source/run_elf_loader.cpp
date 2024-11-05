@@ -1,5 +1,6 @@
 #include "elf_loader.h"
 
+#include <format>
 #include <iostream>
 #include <string>
 
