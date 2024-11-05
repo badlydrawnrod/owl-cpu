@@ -1,11 +1,8 @@
-#include <algorithm>
+#include "elf_loader.h"
+
 #include <cstdint>
 #include <expected>
-#include <filesystem>
-#include <format>
 #include <fstream>
-#include <iostream>
-#include <ranges>
 #include <span>
 #include <vector>
 
@@ -43,75 +40,6 @@
 #define SHF_ALLOC 0x02
 #define SHF_EXECINST 0x04
 
-using Elf32_Addr = uint32_t;
-using Elf32_Off = uint32_t;
-
-// ELF header (Ehdr).
-struct Elf32_Ehdr
-{
-    unsigned char e_ident[EI_NIDENT];
-    uint16_t e_type;
-    uint16_t e_machine;
-    uint32_t e_version;
-    Elf32_Addr e_entry;
-    Elf32_Off e_phoff;
-    Elf32_Off e_shoff;
-    uint32_t e_flags;
-    uint16_t e_ehsize;
-    uint16_t e_phentsize;
-    uint16_t e_phnum;
-    uint16_t e_shentsize;
-    uint16_t e_shnum;
-    uint16_t e_shstrndx;
-};
-
-// Program header (Phdr).
-struct Elf32_Phdr
-{
-    uint32_t p_type;
-    Elf32_Off p_offset;
-    Elf32_Addr p_vaddr;
-    Elf32_Addr p_paddr;
-    uint32_t p_filesz;
-    uint32_t p_memsz;
-    uint32_t p_flags;
-    uint32_t p_align;
-};
-
-// Section header (Shdr).
-struct Elf32_Shdr
-{
-    uint32_t sh_name;
-    uint32_t sh_type;
-    uint32_t sh_flags;
-    Elf32_Addr sh_addr;
-    Elf32_Off sh_offset;
-    uint32_t sh_size;
-    uint32_t sh_link;
-    uint32_t sh_info;
-    uint32_t sh_addralign;
-    uint32_t sh_entsize;
-};
-
-// All headers.
-struct Elf32_Headers
-{
-    Elf32_Ehdr ehdr;               // ELF header.
-    std::vector<Elf32_Phdr> phdrs; // All program headers.
-    std::vector<Elf32_Shdr> shdrs; // All section headers.
-    std::vector<char> names;       // The string section.
-};
-
-enum class elf_errc
-{
-    ER_OK = 0,           // The ELF file was loaded successfully.
-    ER_BAD_ELF,          // The ELF file is badly formatted in some way.
-    ER_INVALID_ARGUMENT, // The caller passed a bad argument.
-    ER_IO_FAILED,        // An I/O operation failed while reading the ELF file.
-    ER_NOT_SUPPORTED,    // The loader doesn't support some aspect of the ELF file, e.g., it isn't
-                         // RISC-V.
-};
-
 std::string to_string(elf_errc err)
 {
     using enum elf_errc;
@@ -131,6 +59,7 @@ std::string to_string(elf_errc err)
     return "unknown";
 }
 
+// TODO: No. Just no. Was I asleep?
 std::string to_string(uint32_t sh_type)
 {
     switch (sh_type)
@@ -151,16 +80,12 @@ std::string to_string(uint32_t sh_type)
     return std::format("{:08x}", sh_type);
 }
 
-template<typename T>
-using ElfResult = std::expected<T, elf_errc>;
-
 auto ReadElfHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Ehdr>
 {
     // Read the ELF header.
     Elf32_Ehdr ehdr{};
 
-    ifs.read(reinterpret_cast<char*>(&ehdr), sizeof(ehdr));
-    if (!ifs)
+    if (!ifs.read(reinterpret_cast<char*>(&ehdr), sizeof(ehdr)))
     {
         return std::unexpected(elf_errc::ER_IO_FAILED);
     }
@@ -248,8 +173,7 @@ auto ReadProgramHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32
 {
     // Read a program header.
     Elf32_Phdr phdr{};
-    ifs.read(reinterpret_cast<char*>(&phdr), sizeof(phdr));
-    if (!ifs)
+    if (!ifs.read(reinterpret_cast<char*>(&phdr), sizeof(phdr)))
     {
         return std::unexpected(elf_errc::ER_IO_FAILED);
     }
@@ -269,8 +193,7 @@ auto ReadSectionHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32
 {
     // Read a section header.
     Elf32_Shdr shdr{};
-    ifs.read(reinterpret_cast<char*>(&shdr), sizeof(shdr));
-    if (!ifs)
+    if (!ifs.read(reinterpret_cast<char*>(&shdr), sizeof(shdr)))
     {
         return std::unexpected(elf_errc::ER_IO_FAILED);
     }
@@ -294,8 +217,10 @@ auto ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr, std::span<char> dst
     // Copy data up to p_filesz (p_filesz <= p_memsz).
     if (phdr.p_filesz != 0)
     {
-        ifs.seekg(phdr.p_offset);
-        ifs.read(dst.data(), phdr.p_filesz);
+        if (!ifs.seekg(phdr.p_offset) || !ifs.read(dst.data(), phdr.p_filesz))
+        {
+            return std::unexpected(elf_errc::ER_IO_FAILED);
+        }
     }
 
     return {};
@@ -315,8 +240,10 @@ auto ReadSection(std::ifstream& ifs, const Elf32_Shdr& shdr, std::span<char> dst
     // Copy data up to sh_size.
     if (shdr.sh_size != 0 && shdr.sh_type != SHT_NOBITS)
     {
-        ifs.seekg(shdr.sh_offset);
-        ifs.read(dst.data(), shdr.sh_size);
+        if (!ifs.seekg(shdr.sh_offset) || !ifs.read(dst.data(), shdr.sh_size))
+        {
+            return std::unexpected(elf_errc::ER_IO_FAILED);
+        }
     }
 
     return {};
@@ -337,8 +264,7 @@ auto ReadElf(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Headers>
     for (uint16_t i = 0; i < ehdr->e_phnum; i++)
     {
         // Go to the program header's entry in the program header table.
-        ifs.seekg(ehdr->e_phoff + i * ehdr->e_phentsize);
-        if (!ifs)
+        if (!ifs.seekg(ehdr->e_phoff + i * ehdr->e_phentsize))
         {
             return std::unexpected(elf_errc::ER_IO_FAILED);
         }
@@ -357,8 +283,7 @@ auto ReadElf(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Headers>
     for (uint16_t i = 0; i < ehdr->e_shnum; i++)
     {
         // Go to the section header's entry in the program header table.
-        ifs.seekg(ehdr->e_shoff + i * ehdr->e_shentsize);
-        if (!ifs)
+        if (!ifs.seekg(ehdr->e_shoff + i * ehdr->e_shentsize))
         {
             return std::unexpected(elf_errc::ER_IO_FAILED);
         }
@@ -396,150 +321,43 @@ auto ReadElf(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Headers>
     return headers;
 }
 
-class ElfLoader
+ElfLoader::ElfLoader(const char* path) : ifs_(path, std::ios::binary | std::ios::ate)
 {
-public:
-    ElfLoader(const char* path) : ifs_(path, std::ios::binary | std::ios::ate)
+    auto fileSize = ifs_.tellg();
+    if (!ifs_.seekg(0))
     {
-        auto fileSize = ifs_.tellg();
-        ifs_.seekg(0);
-        if (!ifs_)
-        {
-            err_ = elf_errc::ER_IO_FAILED;
-            return;
-        }
-
-        auto headers = ReadElf(ifs_, fileSize);
-        if (!headers)
-        {
-            err_ = headers.error();
-            return;
-        }
-
-        headers_ = *headers;
+        err_ = elf_errc::ER_IO_FAILED;
+        return;
     }
 
-    operator bool() const noexcept
+    auto headers = ReadElf(ifs_, fileSize);
+    if (!headers)
     {
-        return err_ == elf_errc::ER_OK;
+        err_ = headers.error();
+        return;
     }
 
-    elf_errc error() const noexcept
-    {
-        return err_;
-    }
+    headers_ = *headers;
+}
 
-    const Elf32_Ehdr& ElfHeader() const
-    {
-        return headers_.ehdr;
-    }
-
-    const std::vector<Elf32_Phdr>& ProgramHeaders() const
-    {
-        return headers_.phdrs;
-    }
-
-    const std::vector<Elf32_Shdr>& SectionHeaders() const
-    {
-        return headers_.shdrs;
-    }
-
-    std::string SectionName(const Elf32_Shdr& shdr) const
-    {
-        return headers_.names.data() + shdr.sh_name;
-    }
-
-    auto ReadSegment(size_t num, std::span<char> dst) -> ElfResult<void>
-    {
-        if (num >= headers_.phdrs.size())
-        {
-            return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
-        }
-
-        const Elf32_Phdr& phdr = headers_.phdrs[num];
-        return ::ReadSegment(ifs_, phdr, dst);
-    }
-
-    auto ReadSection(size_t num, std::span<char> dst) -> ElfResult<void>
-    {
-        if (num >= headers_.shdrs.size())
-        {
-            return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
-        }
-
-        const Elf32_Shdr& shdr = headers_.shdrs[num];
-        return ::ReadSection(ifs_, shdr, dst);
-    }
-
-private:
-    elf_errc err_ = elf_errc::ER_OK;
-    std::ifstream ifs_{};
-    Elf32_Headers headers_{};
-};
-
-int main()
+auto ElfLoader::ReadSegment(size_t num, std::span<char> dst) -> ElfResult<void>
 {
-    const char path[] = "../../target/out/a.out";
-
-    ElfLoader loader(path);
-    if (!loader)
+    if (num >= headers_.phdrs.size())
     {
-        std::cout << std::format("Failed to load {}, {}\n", path, to_string(loader.error()));
-        return 1;
+        return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
     }
 
-    // Display the program headers.
-    std::cout << "Program Headers:\n";
-    for (const auto& phdr : loader.ProgramHeaders())
-    {
-        if (phdr.p_type == PT_LOAD)
-        {
-            // Classify it based on flags and sizes.
-            std::string type{};
-            const auto& flags = phdr.p_flags;
-            if (flags == (PF_R | PF_X))
-            {
-                type = "TEXT (r-x)";
-            }
-            else if (flags == PF_R && phdr.p_filesz != 0)
-            {
-                type = "RODATA (r--)";
-            }
-            else if (flags == (PF_R | PF_W) && phdr.p_filesz != 0)
-            {
-                type = "DATA (rw-)";
-            }
-            else if (flags == (PF_R | PF_W) && phdr.p_filesz == 0)
-            {
-                type = "BSS (rw-)";
-            }
-            else
-            {
-                type = "UNKNOWN";
-            }
+    const Elf32_Phdr& phdr = headers_.phdrs[num];
+    return ::ReadSegment(ifs_, phdr, dst);
+}
 
-            std::cout << std::format("Found loadable {} segment\n", type);
-            std::cout << std::format("\tp_offset = {:08x}\n", phdr.p_offset);
-            std::cout << std::format("\t p_paddr = {:08x}\n", phdr.p_paddr);
-            std::cout << std::format("\t p_vaddr = {:08x}\n", phdr.p_vaddr);
-            std::cout << std::format("\tp_filesz = {:08x}\n", phdr.p_filesz);
-            std::cout << std::format("\t p_memsz = {:08x}\n", phdr.p_memsz);
-        }
+auto ElfLoader::ReadSection(size_t num, std::span<char> dst) -> ElfResult<void>
+{
+    if (num >= headers_.shdrs.size())
+    {
+        return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
     }
 
-    // Display the section headers.
-    std::cout << "\nSection Headers:\n";
-    for (const auto& shdr : loader.SectionHeaders())
-    {
-        std::string name = loader.SectionName(shdr);
-        std::cout << "section name: " << name << '\n';
-        std::cout << std::format("\t  sh_flags = {:08x}\n", shdr.sh_flags);
-        std::cout << std::format("\t   sh_type = {}\n", to_string(shdr.sh_type));
-        std::cout << std::format("\t   sh_addr = {:08x}\n", shdr.sh_addr);
-        std::cout << std::format("\t sh_offset = {:08x}\n", shdr.sh_offset);
-        std::cout << std::format("\t   sh_size = {:08x}\n", shdr.sh_size);
-        std::cout << std::format("\t   sh_info = {:08x}\n", shdr.sh_info);
-    }
-
-    return 0;
+    const Elf32_Shdr& shdr = headers_.shdrs[num];
+    return ::ReadSection(ifs_, shdr, dst);
 }
