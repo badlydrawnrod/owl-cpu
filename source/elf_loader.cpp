@@ -440,6 +440,11 @@ public:
         return headers_.shdrs;
     }
 
+    std::string SectionName(const Elf32_Shdr& shdr, elf_errc& err) const
+    {
+        return headers_.names.data() + shdr.sh_name;
+    }
+
     void ReadSegment(size_t num, std::span<char> dst, elf_errc& err)
     {
         if (num >= headers_.phdrs.size())
@@ -473,27 +478,13 @@ private:
 int main()
 {
     const char path[] = "../../target/out/a.out";
-
-    std::ifstream elfStream(path, std::ios::binary | std::ios::ate);
-    if (!elfStream)
-    {
-        std::cout << "Couldn't open: " << path << '\n';
-        return 1;
-    }
-    auto fileSize = elfStream.tellg();
-    elfStream.seekg(0);
-
     elf_errc err{};
-    Elf32_Headers headers = ReadElf(elfStream, fileSize, err);
-    if (err != elf_errc::ER_OK)
-    {
-        std::cout << to_string(err) << '\n';
-        return 1;
-    }
+
+    ElfLoader loader(path);
 
     // Display the program headers.
     std::cout << "Program Headers:\n";
-    for (const auto& phdr : headers.phdrs)
+    for (const auto& phdr : loader.ProgramHeaders())
     {
         if (phdr.p_type == PT_LOAD)
         {
@@ -532,9 +523,9 @@ int main()
 
     // Display the section headers.
     std::cout << "\nSection Headers:\n";
-    for (const auto& shdr : headers.shdrs)
+    for (const auto& shdr : loader.SectionHeaders())
     {
-        std::string_view name(headers.names.data() + shdr.sh_name);
+        auto name = loader.SectionName(shdr, err);
         std::cout << "section name: " << name << '\n';
         std::cout << std::format("\t  sh_flags = {:08x}\n", shdr.sh_flags);
         std::cout << std::format("\t   sh_type = {}\n", to_string(shdr.sh_type));
