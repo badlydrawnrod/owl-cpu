@@ -7,7 +7,7 @@ ENTRY(_start)
 /* Memory space definition. These blocks of memory will be used in the SECTIONS command. */
 MEMORY
 {
-    RAM (rwx) : ORIGIN = 0, LENGTH = 4K
+    RAM (rwx) : ORIGIN = 0, LENGTH = 32K
 }
 
 REGION_ALIAS("REGION_TEXT", RAM)

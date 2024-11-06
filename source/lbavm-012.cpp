@@ -85,10 +85,10 @@ std::vector<uint32_t> LoadRv32iImage(const char* filename)
     return buf;
 }
 
-std::vector<uint32_t> LoadElfImage(const char* filename)
+std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, uint32_t& textSize)
 {
     ElfLoader loader(filename);
-    constexpr size_t memorySize = romSize + ramSize;
+    constexpr size_t memorySize = 0x8000; // TODO: don't hard code.
     std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
     auto memory = std::as_writable_bytes(std::span(image));
 
@@ -98,6 +98,7 @@ std::vector<uint32_t> LoadElfImage(const char* filename)
     {
         if (phdr.p_type == PT_LOAD)
         {
+
             auto start = phdr.p_paddr;
             auto size = phdr.p_memsz;
             if (start + size >= memory.size())
@@ -112,6 +113,18 @@ std::vector<uint32_t> LoadElfImage(const char* filename)
                 std::cout << "Unable to read segment\n";
                 return {};
             }
+
+            // Quick hack to find where the code is.
+            const auto& flags = phdr.p_flags;
+            if (flags == (PF_R | PF_X))
+            {
+                textStart = start;
+                textSize = size;
+            }
+
+            std::cout << std::format("Loaded segment paddr = {:08x} filesz = {:08x} memsz = "
+                                     "{:08x}, flags = {:08x}\n",
+                                     phdr.p_paddr, phdr.p_filesz, phdr.p_memsz, phdr.p_flags);
         }
         ++i;
     }
@@ -129,16 +142,15 @@ int main(int argc, char* argv[])
         }
 
         // Create a memory image.
-        constexpr size_t memorySize = romSize + ramSize;
+        constexpr size_t memorySize = 0x8000; // 32K
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
         // auto rv32iImage = LoadRv32iImage(argv[1]);
-        auto rv32iImage = LoadElfImage(argv[1]);
+        uint32_t textStart = 0;
+        uint32_t textSize = 0;
+        auto rv32iImage = LoadElfImage(argv[1], textStart, textSize);
 
         // Find the code in the loaded image, i.e., in the TEXT sections `.init` and `.text`.
-        // TODO: don't use hardcoded values.
-        const uint32_t textStart = 0;
-        const uint32_t textSize = 0x3f0;
         std::span<uint32_t> rv32iText(rv32iImage.begin() + textStart / sizeof(uint32_t),
                                       textSize / sizeof(uint32_t));
 
@@ -151,11 +163,15 @@ int main(int argc, char* argv[])
         std::cout << "Running RISC-V encoded instructions...\n";
         RunRv32i(image);
 
-        // // Transcode the code part of the image to Owl-2820.
+        // Transcode the code part of the image to Owl-2820.
         auto owlText = Rv32iToOwl(rv32iText);
 
         std::cout << "Disassembling Owl-2820 encoded instructions...\n";
         DisassembleOwl(owlText);
+
+        // Copy the entire loaded image into the memory image again (mostly to re-initialize .data
+        // and .sdata for non-flash images.
+        std::ranges::copy(rv32iImage, image.begin());
 
         std::cout << "\nRunning Owl-2820 encoded instructions...\n";
         Run(image, owlText);

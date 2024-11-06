@@ -91,5 +91,5 @@ SECTIONS
     _end = .; PROVIDE (end = .);
 
     /* The stack pointer. */
-    __stack = 0x80000;
+    __stack = 0x8000;
 }
