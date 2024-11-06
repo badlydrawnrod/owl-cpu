@@ -3,6 +3,7 @@
 #include "disassembler.h"
 #include "dispatch_owl.h"
 #include "dispatch_rv32i.h"
+#include "elf_loader.h"
 #include "endian.h"
 #include "memory.h"
 #include "opcodes.h"
@@ -84,6 +85,39 @@ std::vector<uint32_t> LoadRv32iImage(const char* filename)
     return buf;
 }
 
+std::vector<uint32_t> LoadElfImage(const char* filename)
+{
+    ElfLoader loader(filename);
+    constexpr size_t memorySize = romSize + ramSize;
+    std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
+    auto memory = std::as_writable_bytes(std::span(image));
+
+    // TODO: This API is clumsy. Fix it.
+    size_t i = 0;
+    for (const auto& phdr : loader.ProgramHeaders())
+    {
+        if (phdr.p_type == PT_LOAD)
+        {
+            auto start = phdr.p_paddr;
+            auto size = phdr.p_memsz;
+            if (start + size >= memory.size())
+            {
+                std::cout << "Segment too big for destination.\n";
+                return {};
+            }
+
+            auto dst = memory.subspan(start, size);
+            if (!loader.ReadSegment(i, dst))
+            {
+                std::cout << "Unable to read segment\n";
+                return {};
+            }
+        }
+        ++i;
+    }
+    return image;
+}
+
 int main(int argc, char* argv[])
 {
     try
@@ -98,14 +132,15 @@ int main(int argc, char* argv[])
         constexpr size_t memorySize = romSize + ramSize;
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
-        auto rv32iImage = LoadRv32iImage(argv[1]);
+        // auto rv32iImage = LoadRv32iImage(argv[1]);
+        auto rv32iImage = LoadElfImage(argv[1]);
 
         // Find the code in the loaded image, i.e., in the TEXT sections `.init` and `.text`.
         // TODO: don't use hardcoded values.
         const uint32_t textStart = 0;
         const uint32_t textSize = 0x3f0;
         std::span<uint32_t> rv32iText(rv32iImage.begin() + textStart / sizeof(uint32_t),
-                                     textSize / sizeof(uint32_t));
+                                      textSize / sizeof(uint32_t));
 
         std::cout << "Disassembling RISC-V encoded instructions...\n";
         DisassembleRv32i(rv32iText);
@@ -116,7 +151,7 @@ int main(int argc, char* argv[])
         std::cout << "Running RISC-V encoded instructions...\n";
         RunRv32i(image);
 
-        // Transcode the code part of the image to Owl-2820.
+        // // Transcode the code part of the image to Owl-2820.
         auto owlText = Rv32iToOwl(rv32iText);
 
         std::cout << "Disassembling Owl-2820 encoded instructions...\n";
