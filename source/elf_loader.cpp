@@ -204,7 +204,8 @@ auto ReadSectionHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32
     return shdr;
 }
 
-auto ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr, std::span<char> dst) -> ElfResult<void>
+auto ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr,
+                 std::span<std::byte> dst) -> ElfResult<void>
 {
     // Is the destination big enough?
     if (phdr.p_memsz > dst.size_bytes())
@@ -213,12 +214,13 @@ auto ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr, std::span<char> dst
     }
 
     // Zero the destination up to p_memsz.
-    std::ranges::fill_n(dst.begin(), phdr.p_memsz, '\0');
+    std::ranges::fill_n(dst.begin(), phdr.p_memsz, std::byte{});
 
     // Copy data up to p_filesz (p_filesz <= p_memsz).
     if (phdr.p_filesz != 0)
     {
-        if (!ifs.seekg(phdr.p_offset) || !ifs.read(dst.data(), phdr.p_filesz))
+        char* dstData = reinterpret_cast<char*>(dst.data());
+        if (!ifs.seekg(phdr.p_offset) || !ifs.read(dstData, phdr.p_filesz))
         {
             return std::unexpected(elf_errc::ER_IO_FAILED);
         }
@@ -227,7 +229,8 @@ auto ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr, std::span<char> dst
     return {};
 }
 
-auto ReadSection(std::ifstream& ifs, const Elf32_Shdr& shdr, std::span<char> dst) -> ElfResult<void>
+auto ReadSection(std::ifstream& ifs, const Elf32_Shdr& shdr,
+                 std::span<std::byte> dst) -> ElfResult<void>
 {
     // Is the destination big enough?
     if (shdr.sh_size > dst.size_bytes())
@@ -236,12 +239,13 @@ auto ReadSection(std::ifstream& ifs, const Elf32_Shdr& shdr, std::span<char> dst
     }
 
     // Zero the destination up to sh_size.
-    std::ranges::fill_n(dst.begin(), shdr.sh_size, '\0');
+    std::ranges::fill_n(dst.begin(), shdr.sh_size, std::byte{});
 
     // Copy data up to sh_size.
     if (shdr.sh_size != 0 && shdr.sh_type != SHT_NOBITS)
     {
-        if (!ifs.seekg(shdr.sh_offset) || !ifs.read(dst.data(), shdr.sh_size))
+        char* dstData = reinterpret_cast<char*>(dst.data());
+        if (!ifs.seekg(shdr.sh_offset) || !ifs.read(dstData, shdr.sh_size))
         {
             return std::unexpected(elf_errc::ER_IO_FAILED);
         }
@@ -312,7 +316,7 @@ auto ReadElf(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Headers>
 
     // Load the string section.
     std::vector<char> names(size);
-    auto sectionResult = ReadSection(ifs, stringSection, names);
+    auto sectionResult = ReadSection(ifs, stringSection, std::as_writable_bytes(std::span(names)));
     if (!sectionResult)
     {
         return std::unexpected(sectionResult.error());
@@ -341,7 +345,7 @@ ElfLoader::ElfLoader(const char* path) : ifs_(path, std::ios::binary | std::ios:
     headers_ = *headers;
 }
 
-auto ElfLoader::ReadSegment(size_t num, std::span<char> dst) -> ElfResult<void>
+auto ElfLoader::ReadSegment(size_t num, std::span<std::byte> dst) -> ElfResult<void>
 {
     if (num >= headers_.phdrs.size())
     {
@@ -352,7 +356,7 @@ auto ElfLoader::ReadSegment(size_t num, std::span<char> dst) -> ElfResult<void>
     return ::ReadSegment(ifs_, phdr, dst);
 }
 
-auto ElfLoader::ReadSection(size_t num, std::span<char> dst) -> ElfResult<void>
+auto ElfLoader::ReadSection(size_t num, std::span<std::byte> dst) -> ElfResult<void>
 {
     if (num >= headers_.shdrs.size())
     {

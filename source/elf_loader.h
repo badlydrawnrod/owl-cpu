@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <fstream>
@@ -123,9 +124,9 @@ auto ReadElfHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Ehd
 auto ReadProgramHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Phdr>;
 auto ReadSectionHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Shdr>;
 auto ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr,
-                 std::span<char> dst) -> ElfResult<void>;
+                 std::span<std::byte> dst) -> ElfResult<void>;
 auto ReadSection(std::ifstream& ifs, const Elf32_Shdr& shdr,
-                 std::span<char> dst) -> ElfResult<void>;
+                 std::span<std::byte> dst) -> ElfResult<void>;
 auto ReadElf(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Headers>;
 
 class ElfLoader
@@ -163,8 +164,8 @@ public:
         return headers_.names.data() + shdr.sh_name;
     }
 
-    auto ReadSegment(size_t num, std::span<char> dst) -> ElfResult<void>;
-    auto ReadSection(size_t num, std::span<char> dst) -> ElfResult<void>;
+    auto ReadSegment(size_t num, std::span<std::byte> dst) -> ElfResult<void>;
+    auto ReadSection(size_t num, std::span<std::byte> dst) -> ElfResult<void>;
 
 private:
     elf_errc err_ = elf_errc::ER_OK;

@@ -68,5 +68,34 @@ int main()
         std::cout << std::format("\t   sh_info = {:08x}\n", shdr.sh_info);
     }
 
+    // Load each loadable program header into the image.
+    constexpr size_t memorySize = 0x8000;
+    std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
+    auto memory = std::as_writable_bytes(std::span(image));
+
+    // TODO: This API is clumsy. Fix it.
+    size_t i = 0;
+    for (const auto& phdr : loader.ProgramHeaders())
+    {
+        if (phdr.p_type == PT_LOAD)
+        {
+            auto start = phdr.p_paddr;
+            auto size = phdr.p_memsz;
+            if (start + size >= memory.size())
+            {
+                std::cout << "Segment too big for destination.\n";
+                return 1;
+            }
+
+            auto dst = memory.subspan(start, size);
+            if (!loader.ReadSegment(i, dst))
+            {
+                std::cout << "Unable to read segment\n";
+                return 1;
+            }
+        }
+        ++i;
+    }
+
     return 0;
 }
