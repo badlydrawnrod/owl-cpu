@@ -75,33 +75,24 @@ void DisassembleRv32i(std::span<uint32_t> image)
     }
 }
 
-std::vector<uint32_t> LoadRv32iImage(const char* filename)
-{
-    std::ifstream fileHandle(filename, std::ios::in | std::ios::binary | std::ios::ate);
-    const std::streampos fileSize = fileHandle.tellg();
-    const size_t sizeInWords = (static_cast<size_t>(fileSize) + 3) / 4;
-    fileHandle.seekg(0, std::ios::beg);
-    std::vector<uint32_t> buf(sizeInWords);
-    fileHandle.read(reinterpret_cast<char*>(buf.data()), fileSize);
-    fileHandle.close();
-    return buf;
-}
-
-// TODO: return a struct rather than this mess.
+// TODO: return a struct, or an ElfResult of a struct rather than this mess.
 std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, uint32_t& textSize)
 {
     std::ifstream ifs(filename, std::ios::binary | std::ios::ate);
     auto fileSize = ifs.tellg();
     if (!ifs.seekg(0))
     {
+        // TODO: complain.
         std::cerr << "Failed to seek to end of file.\n";
         return {};
     }
 
-    // Segment allocator.
+    // The memory that we're going to sub-allocate.
     constexpr size_t memorySize = 0x8000; // TODO: don't hard code.
     std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
-    auto Alloc = [&image, &textSize](const Elf32_Phdr& phdr) -> ElfResult<std::span<std::byte>> {
+
+    // The world's most rudimentary segment allocator.
+    auto Allocate = [&image, &textSize](const Elf32_Phdr& phdr) -> ElfResult<std::span<std::byte>> {
         const auto paddr = phdr.p_paddr;
         const auto memsz = phdr.p_memsz;
         auto dst = std::as_writable_bytes(std::span(image));
@@ -116,9 +107,14 @@ std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, ui
         return dst.subspan(paddr, memsz);
     };
 
-    LoadElf(ifs, fileSize, Alloc);
+    auto loadResult = LoadElf(ifs, fileSize, Allocate);
+    if (!loadResult)
+    {
+        // TODO: complain.
+        std::cerr << "Failed to load elf.\n";
+        return {};
+    }
 
-    auto memory = std::as_writable_bytes(std::span(image));
     return image;
 }
 
@@ -136,7 +132,7 @@ int main(int argc, char* argv[])
         constexpr size_t memorySize = 0x8000; // 32K
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
-        // auto rv32iImage = LoadRv32iImage(argv[1]);
+        // TODO: lose the out parameters.
         uint32_t textStart = 0;
         uint32_t textSize = 0;
         auto rv32iImage = LoadElfImage(argv[1], textStart, textSize);

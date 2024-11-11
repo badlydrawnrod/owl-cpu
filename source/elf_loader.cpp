@@ -58,29 +58,10 @@ std::string to_string(elf_errc err)
         return "i/o failed";
     case ER_NOT_SUPPORTED:
         return "not supported";
+    case ER_ALLOCATION_FAILED:
+        return "allocation failed";
     }
     return "unknown";
-}
-
-// TODO: No. Just no. Was I asleep?
-std::string to_string(uint32_t sh_type)
-{
-    switch (sh_type)
-    {
-    case SHT_NULL:
-        return "SHT_NULL";
-    case SHT_PROGBITS:
-        return "SHT_PROGBITS";
-    case SHT_SYMTAB:
-        return "SHT_SYMTAB";
-    case SHT_STRTAB:
-        return "SHT_STRTAB";
-    case SHT_NOBITS:
-        return "SHT_NOBITS";
-    case SHT_RISCV_ATTRIBUTES:
-        return "SHT_RISCV_ATTRIBUTES";
-    }
-    return std::format("{:08x}", sh_type);
 }
 
 auto ReadElfHeader(std::istream& is, uint32_t fileSize) -> ElfResult<Elf32_Ehdr>
@@ -198,21 +179,19 @@ auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
     return {};
 }
 
-// TODO: return a result like everyone else!
-int LoadElf(std::istream& is, std::streampos fileSize, AllocatorFn allocateSegment)
+auto LoadElf(std::istream& is, std::streampos fileSize,
+             AllocatorFn allocateSegment) -> ElfResult<void>
 {
     auto ehdr = ReadElfHeader(is, fileSize);
     if (!ehdr)
     {
-        std::cout << "Failed to read ELF header\n";
-        return 1;
+        return std::unexpected(ehdr.error());
     }
 
     // Go to the start of the program header table.
     if (!is.seekg(ehdr->e_phoff))
     {
-        std::cerr << "Failed to seek to program header table.\n";
-        return 1;
+        return std::unexpected(elf_errc::ER_IO_FAILED);
     }
 
     // Read the program headers.
@@ -223,8 +202,7 @@ int LoadElf(std::istream& is, std::streampos fileSize, AllocatorFn allocateSegme
         auto phdr = ReadProgramHeader(is, fileSize);
         if (!phdr)
         {
-            std::cout << "Failed to read program header " << i << '\n';
-            return 1;
+            return std::unexpected(phdr.error());
         }
         if (phdr->p_type == PT_LOAD)
         {
@@ -239,8 +217,7 @@ int LoadElf(std::istream& is, std::streampos fileSize, AllocatorFn allocateSegme
         auto segment = allocateSegment(phdr);
         if (!segment)
         {
-            std::cerr << "Failed to allocate memory for segment.\n";
-            return 1;
+            return std::unexpected(elf_errc::ER_IO_FAILED);
         }
 
         // Zero the memory.
@@ -249,18 +226,16 @@ int LoadElf(std::istream& is, std::streampos fileSize, AllocatorFn allocateSegme
         // Seek to the start of the segment data for this program header.
         if (!is.seekg(phdr.p_offset))
         {
-            std::cerr << "Failed to seek to header.\n";
-            return 1;
+            return std::unexpected(elf_errc::ER_IO_FAILED);
         }
 
         // Load the segment data into the segment memory.
         char* dstData = reinterpret_cast<char*>(segment->data());
         if (!is.read(dstData, phdr.p_filesz))
         {
-            std::cerr << "Failed to copy data to segment.\n";
-            return 1;
+            return std::unexpected(elf_errc::ER_IO_FAILED);
         }
     }
 
-    return 0;
+    return {};
 }

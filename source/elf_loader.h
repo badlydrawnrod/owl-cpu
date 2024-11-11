@@ -83,19 +83,19 @@ struct Elf32_Phdr
 // Errors.
 enum class elf_errc
 {
-    ER_OK = 0,           // The ELF file was loaded successfully.
-    ER_BAD_ELF,          // The ELF file is badly formatted in some way.
-    ER_INVALID_ARGUMENT, // The caller passed a bad argument.
-    ER_IO_FAILED,        // An I/O operation failed while reading the ELF file.
-    ER_NOT_SUPPORTED,    // The loader doesn't support some aspect of the ELF file, e.g., it isn't
-                         // RISC-V.
+    ER_OK = 0,            // The ELF file was loaded successfully.
+    ER_BAD_ELF,           // The ELF file is badly formatted in some way.
+    ER_INVALID_ARGUMENT,  // The caller passed a bad argument.
+    ER_IO_FAILED,         // An I/O operation failed while reading the ELF file.
+    ER_NOT_SUPPORTED,     // The loader doesn't support some aspect of the ELF file, e.g., it isn't
+                          // RISC-V.
+    ER_ALLOCATION_FAILED, // Unable to allocate memory.
 };
 
 template<typename T>
 using ElfResult = std::expected<T, elf_errc>;
 
 std::string to_string(elf_errc err);
-std::string to_string(uint32_t sh_type);
 
 auto ReadElfHeader(std::istream& is, uint32_t fileSize) -> ElfResult<Elf32_Ehdr>;
 auto ReadProgramHeader(std::istream& is, uint32_t fileSize) -> ElfResult<Elf32_Phdr>;
@@ -104,4 +104,5 @@ auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
 
 using AllocatorFn = std::function<ElfResult<std::span<std::byte>>(const Elf32_Phdr& phdr)>;
 
-int LoadElf(std::istream& is, std::streampos fileSize, AllocatorFn allocateSegment);
+auto LoadElf(std::istream& is, std::streampos fileSize,
+             AllocatorFn allocateSegment) -> ElfResult<void>;
