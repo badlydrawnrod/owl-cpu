@@ -1,9 +1,11 @@
 #include "elf_loader.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <expected>
 #include <format>
 #include <fstream>
+#include <iostream>
 #include <span>
 #include <vector>
 
@@ -81,12 +83,12 @@ std::string to_string(uint32_t sh_type)
     return std::format("{:08x}", sh_type);
 }
 
-auto ReadElfHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Ehdr>
+auto ReadElfHeader(std::istream& is, uint32_t fileSize) -> ElfResult<Elf32_Ehdr>
 {
     // Read the ELF header.
     Elf32_Ehdr ehdr{};
 
-    if (!ifs.read(reinterpret_cast<char*>(&ehdr), sizeof(ehdr)))
+    if (!is.read(reinterpret_cast<char*>(&ehdr), sizeof(ehdr)))
     {
         return std::unexpected(elf_errc::ER_IO_FAILED);
     }
@@ -148,33 +150,14 @@ auto ReadElfHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Ehd
         return std::unexpected(elf_errc::ER_BAD_ELF);
     }
 
-    // Check that the size of a section header entry is what we expect it to be.
-    if (ehdr.e_shentsize != sizeof(Elf32_Shdr))
-    {
-        return std::unexpected(elf_errc::ER_BAD_ELF);
-    }
-
-    // Check that the section header table is beyond the ELF header and within the file.
-    // TODO: overflow, overlap.
-    if (ehdr.e_shoff < sizeof(ehdr) || ehdr.e_shoff + ehdr.e_shentsize * ehdr.e_shnum > fileSize)
-    {
-        return std::unexpected(elf_errc::ER_BAD_ELF);
-    }
-
-    // Check that the string section is in bounds.
-    if (ehdr.e_shstrndx >= ehdr.e_shnum)
-    {
-        return std::unexpected(elf_errc::ER_BAD_ELF);
-    }
-
     return ehdr;
 }
 
-auto ReadProgramHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Phdr>
+auto ReadProgramHeader(std::istream& is, uint32_t fileSize) -> ElfResult<Elf32_Phdr>
 {
     // Read a program header.
     Elf32_Phdr phdr{};
-    if (!ifs.read(reinterpret_cast<char*>(&phdr), sizeof(phdr)))
+    if (!is.read(reinterpret_cast<char*>(&phdr), sizeof(phdr)))
     {
         return std::unexpected(elf_errc::ER_IO_FAILED);
     }
@@ -190,21 +173,7 @@ auto ReadProgramHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32
     return phdr;
 }
 
-auto ReadSectionHeader(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Shdr>
-{
-    // Read a section header.
-    Elf32_Shdr shdr{};
-    if (!ifs.read(reinterpret_cast<char*>(&shdr), sizeof(shdr)))
-    {
-        return std::unexpected(elf_errc::ER_IO_FAILED);
-    }
-
-    // TODO: other validation.
-
-    return shdr;
-}
-
-auto ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr,
+auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
                  std::span<std::byte> dst) -> ElfResult<void>
 {
     // Is the destination big enough?
@@ -220,7 +189,7 @@ auto ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr,
     if (phdr.p_filesz != 0)
     {
         char* dstData = reinterpret_cast<char*>(dst.data());
-        if (!ifs.seekg(phdr.p_offset) || !ifs.read(dstData, phdr.p_filesz))
+        if (!is.seekg(phdr.p_offset) || !is.read(dstData, phdr.p_filesz))
         {
             return std::unexpected(elf_errc::ER_IO_FAILED);
         }
@@ -229,38 +198,21 @@ auto ReadSegment(std::ifstream& ifs, const Elf32_Phdr& phdr,
     return {};
 }
 
-auto ReadSection(std::ifstream& ifs, const Elf32_Shdr& shdr,
-                 std::span<std::byte> dst) -> ElfResult<void>
+// TODO: return a result like everyone else!
+int LoadElf(std::istream& is, std::streampos fileSize, AllocatorFn allocateSegment)
 {
-    // Is the destination big enough?
-    if (shdr.sh_size > dst.size_bytes())
-    {
-        return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
-    }
-
-    // Zero the destination up to sh_size.
-    std::ranges::fill_n(dst.begin(), shdr.sh_size, std::byte{});
-
-    // Copy data up to sh_size.
-    if (shdr.sh_size != 0 && shdr.sh_type != SHT_NOBITS)
-    {
-        char* dstData = reinterpret_cast<char*>(dst.data());
-        if (!ifs.seekg(shdr.sh_offset) || !ifs.read(dstData, shdr.sh_size))
-        {
-            return std::unexpected(elf_errc::ER_IO_FAILED);
-        }
-    }
-
-    return {};
-}
-
-auto ReadElf(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Headers>
-{
-    // Read the ELF header.
-    auto ehdr = ReadElfHeader(ifs, fileSize);
+    auto ehdr = ReadElfHeader(is, fileSize);
     if (!ehdr)
     {
-        return std::unexpected(ehdr.error());
+        std::cout << "Failed to read ELF header\n";
+        return 1;
+    }
+
+    // Go to the start of the program header table.
+    if (!is.seekg(ehdr->e_phoff))
+    {
+        std::cerr << "Failed to seek to program header table.\n";
+        return 1;
     }
 
     // Read the program headers.
@@ -268,101 +220,47 @@ auto ReadElf(std::ifstream& ifs, uint32_t fileSize) -> ElfResult<Elf32_Headers>
     phdrs.reserve(ehdr->e_phnum);
     for (uint16_t i = 0; i < ehdr->e_phnum; i++)
     {
-        // Go to the program header's entry in the program header table.
-        if (!ifs.seekg(ehdr->e_phoff + i * ehdr->e_phentsize))
-        {
-            return std::unexpected(elf_errc::ER_IO_FAILED);
-        }
-
-        auto phdr = ReadProgramHeader(ifs, fileSize);
+        auto phdr = ReadProgramHeader(is, fileSize);
         if (!phdr)
         {
-            return std::unexpected(phdr.error());
+            std::cout << "Failed to read program header " << i << '\n';
+            return 1;
         }
-        phdrs.push_back(*phdr);
-    }
-
-    // Read the section headers.
-    std::vector<Elf32_Shdr> shdrs;
-    shdrs.reserve(ehdr->e_shnum);
-    for (uint16_t i = 0; i < ehdr->e_shnum; i++)
-    {
-        // Go to the section header's entry in the program header table.
-        if (!ifs.seekg(ehdr->e_shoff + i * ehdr->e_shentsize))
+        if (phdr->p_type == PT_LOAD)
         {
-            return std::unexpected(elf_errc::ER_IO_FAILED);
+            phdrs.push_back(*phdr);
         }
+    }
 
-        auto shdr = ReadSectionHeader(ifs, fileSize);
-        if (!shdr)
+    // Load each loadable section.
+    for (const auto& phdr : phdrs)
+    {
+        // Get some memory for the segment.
+        auto segment = allocateSegment(phdr);
+        if (!segment)
         {
-            return std::unexpected(shdr.error());
+            std::cerr << "Failed to allocate memory for segment.\n";
+            return 1;
         }
-        shdrs.push_back(*shdr);
-    }
 
-    // Find the section header for the string section.
-    const Elf32_Shdr& stringSection = shdrs[ehdr->e_shstrndx];
-    const auto size = stringSection.sh_size;
+        // Zero the memory.
+        std::ranges::fill(*segment, std::byte{});
 
-    // Check that string indexes are within the string section.
-    for (const auto& shdr : shdrs)
-    {
-        if (shdr.sh_name >= size)
+        // Seek to the start of the segment data for this program header.
+        if (!is.seekg(phdr.p_offset))
         {
-            return std::unexpected(elf_errc::ER_BAD_ELF);
+            std::cerr << "Failed to seek to header.\n";
+            return 1;
+        }
+
+        // Load the segment data into the segment memory.
+        char* dstData = reinterpret_cast<char*>(segment->data());
+        if (!is.read(dstData, phdr.p_filesz))
+        {
+            std::cerr << "Failed to copy data to segment.\n";
+            return 1;
         }
     }
 
-    // Load the string section.
-    std::vector<char> names(size);
-    auto sectionResult = ReadSection(ifs, stringSection, std::as_writable_bytes(std::span(names)));
-    if (!sectionResult)
-    {
-        return std::unexpected(sectionResult.error());
-    }
-
-    Elf32_Headers headers{.ehdr = *ehdr, .phdrs = phdrs, .shdrs = shdrs, .names = names};
-    return headers;
-}
-
-ElfLoader::ElfLoader(const char* path) : ifs_(path, std::ios::binary | std::ios::ate)
-{
-    auto fileSize = ifs_.tellg();
-    if (!ifs_.seekg(0))
-    {
-        err_ = elf_errc::ER_IO_FAILED;
-        return;
-    }
-
-    auto headers = ReadElf(ifs_, fileSize);
-    if (!headers)
-    {
-        err_ = headers.error();
-        return;
-    }
-
-    headers_ = *headers;
-}
-
-auto ElfLoader::ReadSegment(size_t num, std::span<std::byte> dst) -> ElfResult<void>
-{
-    if (num >= headers_.phdrs.size())
-    {
-        return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
-    }
-
-    const Elf32_Phdr& phdr = headers_.phdrs[num];
-    return ::ReadSegment(ifs_, phdr, dst);
-}
-
-auto ElfLoader::ReadSection(size_t num, std::span<std::byte> dst) -> ElfResult<void>
-{
-    if (num >= headers_.shdrs.size())
-    {
-        return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
-    }
-
-    const Elf32_Shdr& shdr = headers_.shdrs[num];
-    return ::ReadSection(ifs_, shdr, dst);
+    return 0;
 }

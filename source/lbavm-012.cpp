@@ -8,9 +8,11 @@
 #include "memory.h"
 #include "opcodes.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <span>
 #include <vector>
@@ -85,49 +87,38 @@ std::vector<uint32_t> LoadRv32iImage(const char* filename)
     return buf;
 }
 
+// TODO: return a struct rather than this mess.
 std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, uint32_t& textSize)
 {
-    ElfLoader loader(filename);
+    std::ifstream ifs(filename, std::ios::binary | std::ios::ate);
+    auto fileSize = ifs.tellg();
+    if (!ifs.seekg(0))
+    {
+        std::cerr << "Failed to seek to end of file.\n";
+        return {};
+    }
+
+    // Segment allocator.
     constexpr size_t memorySize = 0x8000; // TODO: don't hard code.
     std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
-    auto memory = std::as_writable_bytes(std::span(image));
-
-    // TODO: This API is clumsy. Fix it.
-    size_t i = 0;
-    for (const auto& phdr : loader.ProgramHeaders())
-    {
-        if (phdr.p_type == PT_LOAD)
+    auto Alloc = [&image, &textSize](const Elf32_Phdr& phdr) -> ElfResult<std::span<std::byte>> {
+        const auto paddr = phdr.p_paddr;
+        const auto memsz = phdr.p_memsz;
+        auto dst = std::as_writable_bytes(std::span(image));
+        if (paddr + memsz > dst.size())
         {
-
-            auto start = phdr.p_paddr;
-            auto size = phdr.p_memsz;
-            if (start + size >= memory.size())
-            {
-                std::cout << "Segment too big for destination.\n";
-                return {};
-            }
-
-            auto dst = memory.subspan(start, size);
-            if (!loader.ReadSegment(i, dst))
-            {
-                std::cout << "Unable to read segment\n";
-                return {};
-            }
-
-            // Quick hack to find where the code is.
-            const auto& flags = phdr.p_flags;
-            if (flags == (PF_R | PF_X))
-            {
-                textStart = start;
-                textSize = size;
-            }
-
-            std::cout << std::format("Loaded segment paddr = {:08x} filesz = {:08x} memsz = "
-                                     "{:08x}, flags = {:08x}\n",
-                                     phdr.p_paddr, phdr.p_filesz, phdr.p_memsz, phdr.p_flags);
+            return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
         }
-        ++i;
-    }
+        if (phdr.p_flags & PF_X)
+        {
+            textSize = memsz;
+        }
+        return dst.subspan(paddr, memsz);
+    };
+
+    LoadElf(ifs, fileSize, Alloc);
+
+    auto memory = std::as_writable_bytes(std::span(image));
     return image;
 }
 
