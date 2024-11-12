@@ -80,6 +80,30 @@ struct Elf32_Phdr
     uint32_t p_align;
 };
 
+struct LoadAddresses
+{
+    // Code.
+    uint32_t startText = 0;
+    uint32_t endText = 0;
+    // Read-only data.
+    uint32_t startRoData = 0;
+    uint32_t endRoData = 0;
+    // Initialized data.
+    uint32_t startData = 0;
+    uint32_t endData = 0;
+    // Uninitialized data.
+    uint32_t startBss = 0;
+    uint32_t endBss = 0;
+};
+
+struct Loaded
+{
+    LoadAddresses lma; // Where the segments are loaded to.
+    LoadAddresses vma; // Where they are logically.
+    uint32_t startRom;
+    uint32_t endRom;
+};
+
 // Errors.
 enum class elf_errc
 {
@@ -104,4 +128,4 @@ auto ReadProgramHeader(std::istream& is, uint32_t fileSize) -> ElfResult<Elf32_P
 auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
                  std::span<std::byte> dst) -> ElfResult<void>;
 auto LoadExecutable(std::istream& is, std::streampos fileSize,
-                    AllocatorFn allocateSegment) -> ElfResult<void>;
+                    AllocatorFn allocateSegment) -> ElfResult<Loaded>;

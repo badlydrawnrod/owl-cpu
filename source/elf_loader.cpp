@@ -180,7 +180,7 @@ auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
 }
 
 auto LoadExecutable(std::istream& is, std::streampos fileSize,
-                    AllocatorFn allocateSegment) -> ElfResult<void>
+                    AllocatorFn allocateSegment) -> ElfResult<Loaded>
 {
     auto ehdr = ReadElfHeader(is, fileSize);
     if (!ehdr)
@@ -210,9 +210,76 @@ auto LoadExecutable(std::istream& is, std::streampos fileSize,
         }
     }
 
-    // Load each loadable section.
+    LoadAddresses lma{};
+    LoadAddresses vma{};
+    uint32_t startRom = 0;
+    uint32_t endRom = 0;
+
+    // Load each loadable segment.
     for (const auto& phdr : phdrs)
     {
+        const auto paddr = phdr.p_paddr;
+        const auto vaddr = phdr.p_vaddr;
+        const auto memsz = phdr.p_memsz;
+        const auto filesz = phdr.p_filesz;
+
+        if (phdr.p_flags & PF_X)
+        {
+            // Executable segment.
+            lma.startText = paddr;
+            lma.endText = paddr + filesz;
+            vma.startText = vaddr;
+            vma.endText = vaddr + filesz;
+            startRom = paddr;
+            endRom = paddr + filesz;
+        }
+        else if (phdr.p_flags == PF_R)
+        {
+            // Read-only segment.
+            lma.startRoData = paddr;
+            lma.endRoData = paddr + filesz;
+            vma.startRoData = vaddr;
+            vma.endRoData = vaddr + filesz;
+            endRom = paddr + filesz;
+        }
+        else if (phdr.p_flags == (PF_R | PF_W))
+        {
+            // Read/write segment.
+            if (memsz == filesz)
+            {
+                // Initialized data only.
+                lma.startData = paddr;
+                lma.endData = paddr + filesz;
+                vma.startData = vaddr;
+                vma.endData = vaddr + filesz;
+                if (paddr != vaddr)
+                {
+                    // The initialized data is copied from read-only memory to read-write memory.
+                    endRom = paddr + filesz;
+                }
+            }
+            else if (filesz == 0)
+            {
+                // Uninitialized data only.
+                lma.startBss = paddr;
+                lma.endBss = paddr + memsz;
+                vma.startBss = vaddr;
+                vma.endBss = vaddr + memsz;
+            }
+            else
+            {
+                // Both initialized data and uninitialized data.
+                lma.startBss = paddr + filesz;
+                lma.endBss = paddr + memsz;
+                vma.startBss = vaddr;
+                vma.endBss = vaddr + memsz;
+                lma.startData = paddr;
+                lma.endData = paddr + filesz;
+                vma.startData = vaddr;
+                vma.endData = vaddr + filesz;
+            }
+        }
+
         // Get some memory for the segment.
         auto segment = allocateSegment(phdr);
         if (!segment)
@@ -237,5 +304,5 @@ auto LoadExecutable(std::istream& is, std::streampos fileSize,
         }
     }
 
-    return {};
+    return Loaded{.lma = lma, .vma = vma, .startRom = startRom, .endRom = endRom};
 }

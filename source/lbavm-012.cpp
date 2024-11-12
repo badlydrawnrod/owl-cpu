@@ -92,92 +92,14 @@ std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, ui
     constexpr size_t memorySize = 0x8000; // TODO: don't hard code.
     std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
-    struct LoadAddresses
-    {
-        uint32_t startText = 0;
-        uint32_t endText = 0;
-        uint32_t startRoData = 0;
-        uint32_t endRoData = 0;
-        uint32_t startData = 0;
-        uint32_t endData = 0;
-        uint32_t startBss = 0;
-        uint32_t endBss = 0;
-    };
-
-    LoadAddresses lma{};
-    LoadAddresses vma{};
-    uint32_t startRom = 0;
-    uint32_t endRom = 0;
-
     // The world's most rudimentary segment allocator.
     auto Allocate = [&](const Elf32_Phdr& phdr) -> ElfResult<std::span<std::byte>> {
         const auto paddr = phdr.p_paddr;
-        const auto vaddr = phdr.p_vaddr;
         const auto memsz = phdr.p_memsz;
-        const auto filesz = phdr.p_filesz;
         auto dst = std::as_writable_bytes(std::span(image));
         if (paddr + memsz > dst.size())
         {
             return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
-        }
-
-        // TODO: does this bit even belong here? Are the mins and maxes necessary, or can we make
-        // some assumptions?
-        std::cout << "Flags: " << phdr.p_flags << " ";
-        if (phdr.p_flags & PF_X)
-        {
-            std::cout << "TEXT\n";
-            lma.startText = paddr;
-            lma.endText = paddr + filesz;
-            vma.startText = vaddr;
-            vma.endText = vaddr + filesz;
-            textSize = lma.endText - lma.startText;
-            startRom = paddr;
-            endRom = paddr + filesz;
-        }
-        else if (phdr.p_flags == PF_R)
-        {
-            std::cout << "RODATA\n";
-            lma.startRoData = paddr;
-            lma.endRoData = paddr + filesz;
-            vma.startRoData = vaddr;
-            vma.endRoData = vaddr + filesz;
-            endRom = paddr + filesz;
-        }
-        else if (phdr.p_flags == (PF_R | PF_W))
-        {
-            if (memsz == filesz)
-            {
-                std::cout << "DATA\n";
-                lma.startData = paddr;
-                lma.endData = paddr + filesz;
-                vma.startData = vaddr;
-                vma.endData = vaddr + filesz;
-                if (paddr != vaddr)
-                {
-                    endRom = paddr + filesz;
-                }
-            }
-            else if (filesz == 0)
-            {
-                std::cout << "BSS\n";
-                lma.startBss = paddr;
-                lma.endBss = paddr + memsz;
-                vma.startBss = vaddr;
-                vma.endBss = vaddr + memsz;
-            }
-            else
-            {
-                std::cout << "DATA/BSS\n";
-                lma.startBss = paddr + filesz;
-                lma.endBss = paddr + memsz;
-                vma.startBss = vaddr;
-                vma.endBss = vaddr + memsz;
-                lma.startData = paddr;
-                lma.endData = paddr + filesz;
-                vma.startData = vaddr;
-                vma.endData = vaddr + filesz;
-            }
         }
 
         return dst.subspan(paddr, memsz);
@@ -190,6 +112,11 @@ std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, ui
         std::cerr << "Failed to load elf.\n";
         return {};
     }
+
+    const auto& lma = loadResult->lma;
+    const auto& vma = loadResult->vma;
+    const auto startRom = loadResult->startRom;
+    const auto endRom = loadResult->endRom;
 
     std::cout << "LMA\n";
     std::cout << std::format("  text start: {:08x} end: {:08x} size: {:08x}\n", lma.startText,
@@ -214,6 +141,9 @@ std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, ui
     std::cout << "ROM\n";
     std::cout << std::format("   rom start: {:08x} end: {:08x} size: {:08x}\n", startRom, endRom,
                              endRom - startRom);
+
+    textStart = loadResult->lma.startText;
+    textSize = loadResult->lma.endText - loadResult->lma.startText;
 
     return image;
 }
