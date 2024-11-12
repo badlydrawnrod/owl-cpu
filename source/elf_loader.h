@@ -95,14 +95,13 @@ enum class elf_errc
 template<typename T>
 using ElfResult = std::expected<T, elf_errc>;
 
+using AllocatorFn = std::function<ElfResult<std::span<std::byte>>(const Elf32_Phdr& phdr)>;
+
 std::string to_string(elf_errc err);
 
 auto ReadElfHeader(std::istream& is, uint32_t fileSize) -> ElfResult<Elf32_Ehdr>;
 auto ReadProgramHeader(std::istream& is, uint32_t fileSize) -> ElfResult<Elf32_Phdr>;
 auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
                  std::span<std::byte> dst) -> ElfResult<void>;
-
-using AllocatorFn = std::function<ElfResult<std::span<std::byte>>(const Elf32_Phdr& phdr)>;
-
-auto LoadElf(std::istream& is, std::streampos fileSize,
-             AllocatorFn allocateSegment) -> ElfResult<void>;
+auto LoadExecutable(std::istream& is, std::streampos fileSize,
+                    AllocatorFn allocateSegment) -> ElfResult<void>;

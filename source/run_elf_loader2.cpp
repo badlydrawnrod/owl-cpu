@@ -31,7 +31,7 @@ int main()
         return dst.subspan(paddr, memsz);
     };
 
-    LoadElf(ifs, fileSize, Alloc);
+    LoadExecutable(ifs, fileSize, Alloc);
 
     std::cout << "Done\n";
 

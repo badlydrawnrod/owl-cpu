@@ -179,8 +179,8 @@ auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
     return {};
 }
 
-auto LoadElf(std::istream& is, std::streampos fileSize,
-             AllocatorFn allocateSegment) -> ElfResult<void>
+auto LoadExecutable(std::istream& is, std::streampos fileSize,
+                    AllocatorFn allocateSegment) -> ElfResult<void>
 {
     auto ehdr = ReadElfHeader(is, fileSize);
     if (!ehdr)
