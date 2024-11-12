@@ -13,7 +13,7 @@
 // https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 // https://man7.org/linux/man-pages/man5/elf.5.html
 
-// TODO: Replace / hide as appropriate.
+// TODO: Replace / hide as appropriate. We don't want #defines if we can help it!
 
 #define EI_NIDENT 16
 
@@ -33,17 +33,6 @@
 #define PF_X 1
 #define PF_W 2
 #define PF_R 4
-
-// #define SHT_NULL 0
-// #define SHT_PROGBITS 1
-// #define SHT_SYMTAB 2
-// #define SHT_STRTAB 3
-// #define SHT_NOBITS 8
-// #define SHT_RISCV_ATTRIBUTES 0x70000003
-
-// #define SHF_WRITE 0x01
-// #define SHF_ALLOC 0x02
-// #define SHF_EXECINST 0x04
 
 using Elf32_Addr = uint32_t;
 using Elf32_Off = uint32_t;
@@ -80,6 +69,7 @@ struct Elf32_Phdr
     uint32_t p_align;
 };
 
+// TODO: Needs a better name.
 struct LoadAddresses
 {
     // Code.
@@ -96,12 +86,13 @@ struct LoadAddresses
     uint32_t endBss = 0;
 };
 
+// TODO: Needs a better name.
 struct Loaded
 {
-    LoadAddresses lma; // Where the segments are loaded to.
-    LoadAddresses vma; // Where they are logically.
-    uint32_t startRom;
-    uint32_t endRom;
+    LoadAddresses lma{}; // Where the segments are loaded to.
+    LoadAddresses vma{}; // Where they are logically.
+    uint32_t startRom = 0;
+    uint32_t endRom = 0;
 };
 
 // Errors.

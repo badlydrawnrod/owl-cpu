@@ -179,49 +179,19 @@ auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
     return {};
 }
 
-auto LoadExecutable(std::istream& is, std::streampos fileSize,
-                    AllocatorFn allocateSegment) -> ElfResult<Loaded>
+namespace
 {
-    auto ehdr = ReadElfHeader(is, fileSize);
-    if (!ehdr)
-    {
-        return std::unexpected(ehdr.error());
-    }
-
-    // Go to the start of the program header table.
-    if (!is.seekg(ehdr->e_phoff))
-    {
-        return std::unexpected(elf_errc::ER_IO_FAILED);
-    }
-
-    // Read the program headers.
-    std::vector<Elf32_Phdr> phdrs;
-    phdrs.reserve(ehdr->e_phnum);
-    for (uint16_t i = 0; i < ehdr->e_phnum; i++)
-    {
-        auto phdr = ReadProgramHeader(is, fileSize);
-        if (!phdr)
-        {
-            return std::unexpected(phdr.error());
-        }
-        if (phdr->p_type == PT_LOAD)
-        {
-            phdrs.push_back(*phdr);
-        }
-    }
-
-    LoadAddresses lma{};
-    LoadAddresses vma{};
-    uint32_t startRom = 0;
-    uint32_t endRom = 0;
-
-    // Load each loadable segment.
-    for (const auto& phdr : phdrs)
+    Loaded& UpdateLoaded(const Elf32_Phdr& phdr, Loaded& loaded)
     {
         const auto paddr = phdr.p_paddr;
         const auto vaddr = phdr.p_vaddr;
         const auto memsz = phdr.p_memsz;
         const auto filesz = phdr.p_filesz;
+
+        auto& lma = loaded.lma;
+        auto& vma = loaded.vma;
+        auto& startRom = loaded.startRom;
+        auto& endRom = loaded.endRom;
 
         if (phdr.p_flags & PF_X)
         {
@@ -280,6 +250,48 @@ auto LoadExecutable(std::istream& is, std::streampos fileSize,
             }
         }
 
+        return loaded;
+    }
+} // namespace
+
+auto LoadExecutable(std::istream& is, std::streampos fileSize,
+                    AllocatorFn allocateSegment) -> ElfResult<Loaded>
+{
+    auto ehdr = ReadElfHeader(is, fileSize);
+    if (!ehdr)
+    {
+        return std::unexpected(ehdr.error());
+    }
+
+    // Go to the start of the program header table.
+    if (!is.seekg(ehdr->e_phoff))
+    {
+        return std::unexpected(elf_errc::ER_IO_FAILED);
+    }
+
+    // Read the program headers.
+    std::vector<Elf32_Phdr> phdrs;
+    phdrs.reserve(ehdr->e_phnum);
+    for (uint16_t i = 0; i < ehdr->e_phnum; i++)
+    {
+        auto phdr = ReadProgramHeader(is, fileSize);
+        if (!phdr)
+        {
+            return std::unexpected(phdr.error());
+        }
+        if (phdr->p_type == PT_LOAD)
+        {
+            phdrs.push_back(*phdr);
+        }
+    }
+
+    Loaded loaded{};
+
+    // Load each loadable segment.
+    for (const auto& phdr : phdrs)
+    {
+        UpdateLoaded(phdr, loaded);
+
         // Get some memory for the segment.
         auto segment = allocateSegment(phdr);
         if (!segment)
@@ -304,5 +316,5 @@ auto LoadExecutable(std::istream& is, std::streampos fileSize,
         }
     }
 
-    return Loaded{.lma = lma, .vma = vma, .startRom = startRom, .endRom = endRom};
+    return loaded;
 }
