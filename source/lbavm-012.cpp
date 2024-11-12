@@ -76,16 +76,19 @@ void DisassembleRv32i(std::span<uint32_t> image)
     }
 }
 
-// TODO: return a struct, or an ElfResult of a struct rather than this mess.
-std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, uint32_t& textSize)
+struct Image
+{
+    std::vector<uint32_t> image;
+    Loaded loaded;
+};
+
+auto LoadElfImage(const char* filename) -> ElfResult<Image>
 {
     std::ifstream ifs(filename, std::ios::binary | std::ios::ate);
     auto fileSize = ifs.tellg();
     if (!ifs.seekg(0))
     {
-        // TODO: complain.
-        std::cerr << "Failed to seek to end of file.\n";
-        return {};
+        return std::unexpected(elf_errc::ER_IO_FAILED);
     }
 
     // The memory that we're going to sub-allocate.
@@ -105,18 +108,16 @@ std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, ui
         return dst.subspan(paddr, memsz);
     };
 
-    auto loadResult = LoadExecutable(ifs, fileSize, Allocate);
-    if (!loadResult)
+    auto loaded = LoadExecutable(ifs, fileSize, Allocate);
+    if (!loaded)
     {
-        // TODO: complain.
-        std::cerr << "Failed to load elf.\n";
-        return {};
+        return std::unexpected(loaded.error());
     }
 
-    const auto& lma = loadResult->lma;
-    const auto& vma = loadResult->vma;
-    const auto startRom = loadResult->startRom;
-    const auto endRom = loadResult->endRom;
+    const auto& lma = loaded->lma;
+    const auto& vma = loaded->vma;
+    const auto startRom = loaded->startRom;
+    const auto endRom = loaded->endRom;
 
     std::cout << "LMA\n";
     std::cout << std::format("  text start: {:08x} end: {:08x} size: {:08x}\n", lma.startText,
@@ -142,10 +143,7 @@ std::vector<uint32_t> LoadElfImage(const char* filename, uint32_t& textStart, ui
     std::cout << std::format("   rom start: {:08x} end: {:08x} size: {:08x}\n", startRom, endRom,
                              endRom - startRom);
 
-    textStart = loadResult->lma.startText;
-    textSize = loadResult->lma.endText - loadResult->lma.startText;
-
-    return image;
+    return Image{.image = image, .loaded = *loaded};
 }
 
 int main(int argc, char* argv[])
@@ -158,21 +156,29 @@ int main(int argc, char* argv[])
             return 2;
         }
 
-        // Create a memory image.
-        constexpr size_t memorySize = 0x8000; // 32K
-        std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
+        // Load the image from an ELF file.
+        auto loadedImage = LoadElfImage(argv[1]);
+        if (!loadedImage)
+        {
+            std::cerr << "Failed to load ELF image: " << to_string(loadedImage.error()) << '\n';
+            return 1;
+        }
 
-        // TODO: lose the out parameters.
-        uint32_t textStart = 0;
-        uint32_t textSize = 0;
-        auto rv32iImage = LoadElfImage(argv[1], textStart, textSize);
+        auto& rv32iImage = loadedImage->image;
+        const uint32_t textStart = loadedImage->loaded.lma.startText;
+        const uint32_t textSize =
+                loadedImage->loaded.lma.endText - loadedImage->loaded.lma.startText;
 
-        // Find the code in the loaded image, i.e., in the TEXT sections `.init` and `.text`.
+        // Find the code in the loaded image.
         std::span<uint32_t> rv32iText(rv32iImage.begin() + textStart / sizeof(uint32_t),
                                       textSize / sizeof(uint32_t));
 
         std::cout << "Disassembling RISC-V encoded instructions...\n";
         DisassembleRv32i(rv32iText);
+
+        // Create a memory image.
+        constexpr size_t memorySize = 0x8000; // 32K
+        std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
         // Copy the entire loaded image into the memory image.
         std::ranges::copy(rv32iImage, image.begin());
@@ -180,14 +186,14 @@ int main(int argc, char* argv[])
         std::cout << "Running RISC-V encoded instructions...\n";
         RunRv32i(image);
 
-        // Transcode the code part of the image to Owl-2820.
+        // Transcode the code part of the image to Owl-2820 encoding.
         auto owlText = Rv32iToOwl(rv32iText);
 
         std::cout << "Disassembling Owl-2820 encoded instructions...\n";
         DisassembleOwl(owlText);
 
-        // Copy the entire loaded image into the memory image again (mostly to re-initialize .data
-        // and .sdata for non-flash images.
+        // Copy the entire loaded image into the memory image again to re-initialize .data and
+        // .sdata for non-flash images.
         std::ranges::copy(rv32iImage, image.begin());
 
         std::cout << "\nRunning Owl-2820 encoded instructions...\n";
