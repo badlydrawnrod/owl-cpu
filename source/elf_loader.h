@@ -13,26 +13,7 @@
 // https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 // https://man7.org/linux/man-pages/man5/elf.5.html
 
-// TODO: Replace / hide as appropriate. We don't want #defines if we can help it!
-
-#define EI_NIDENT 16
-
-#define EI_MAG0 0
-#define EI_MAG1 1
-#define EI_MAG2 2
-#define EI_MAG3 3
-#define EI_CLASS 4
-#define EI_DATA 5
-#define EI_VERSION 6
-
-#define ET_EXEC 2
-#define EM_RISCV 0xf3
-
-#define PT_LOAD 1
-
-#define PF_X 1
-#define PF_W 2
-#define PF_R 4
+constexpr size_t EI_NIDENT = 16;
 
 using Elf32_Addr = uint32_t;
 using Elf32_Off = uint32_t;

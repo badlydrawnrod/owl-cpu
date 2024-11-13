@@ -13,35 +13,41 @@
 // https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 // https://man7.org/linux/man-pages/man5/elf.5.html
 
-#define EI_NIDENT 16
+namespace
+{
+    enum
+    {
+        EI_MAG0 = 0,
+        EI_MAG1,
+        EI_MAG2,
+        EI_MAG3,
+        EI_CLASS,
+        EI_DATA,
+        EI_VERSION
+    };
 
-#define EI_MAG0 0
-#define EI_MAG1 1
-#define EI_MAG2 2
-#define EI_MAG3 3
-#define EI_CLASS 4
-#define EI_DATA 5
-#define EI_VERSION 6
+    enum
+    {
+        PF_X = 1,
+        PF_W = 2,
+        PF_R = 4
+    };
 
-#define ET_EXEC 2
-#define EM_RISCV 0xf3
+    enum
+    {
+        ET_EXEC = 2
+    };
 
-#define PT_LOAD 1
+    enum
+    {
+        EM_RISCV = 0xf3
+    };
 
-#define PF_X 1
-#define PF_W 2
-#define PF_R 4
-
-#define SHT_NULL 0
-#define SHT_PROGBITS 1
-#define SHT_SYMTAB 2
-#define SHT_STRTAB 3
-#define SHT_NOBITS 8
-#define SHT_RISCV_ATTRIBUTES 0x70000003
-
-#define SHF_WRITE 0x01
-#define SHF_ALLOC 0x02
-#define SHF_EXECINST 0x04
+    enum
+    {
+        PT_LOAD = 1
+    };
+} // namespace
 
 std::string to_string(elf_errc err)
 {
@@ -315,6 +321,5 @@ auto LoadExecutable(std::istream& is, std::streampos fileSize,
             return std::unexpected(elf_errc::ER_IO_FAILED);
         }
     }
-
     return loaded;
 }
