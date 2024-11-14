@@ -84,26 +84,26 @@ struct Image
     elf::Segments segments;
 };
 
-elf::ElfResult<Image> LoadElfImage(const char* filename)
+elf::Result<Image> LoadElfImage(const char* filename)
 {
     std::ifstream ifs(filename, std::ios::binary | std::ios::ate);
     auto fileSize = ifs.tellg();
     if (!ifs.seekg(0))
     {
-        return std::unexpected(elf::elf_errc::ER_IO_FAILED);
+        return std::unexpected(elf::Error::ER_IO_FAILED);
     }
 
     // The memory that we're going to sub-allocate.
     std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
     // The world's most rudimentary segment allocator.
-    auto Allocate = [&](const elf::Elf32_Phdr& phdr) -> elf::ElfResult<std::span<std::byte>> {
+    auto Allocate = [&](const elf::Phdr& phdr) -> elf::MemoryResult {
         const auto paddr = phdr.p_paddr;
         const auto memsz = phdr.p_memsz;
         auto dst = std::as_writable_bytes(std::span(image));
         if (paddr + memsz > dst.size())
         {
-            return std::unexpected(elf::elf_errc::ER_INVALID_ARGUMENT);
+            return std::unexpected(elf::Error::ER_INVALID_ARGUMENT);
         }
 
         return dst.subspan(paddr, memsz);

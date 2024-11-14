@@ -3,8 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
-#include <istream>
 #include <functional>
+#include <istream>
 #include <span>
 #include <string>
 #include <vector>
@@ -22,7 +22,7 @@ namespace elf
     using Elf32_Off = uint32_t;
 
     // ELF header (Ehdr).
-    struct Elf32_Ehdr
+    struct Ehdr
     {
         unsigned char e_ident[EI_NIDENT];
         uint16_t e_type;
@@ -41,7 +41,7 @@ namespace elf
     };
 
     // Program header (Phdr).
-    struct Elf32_Phdr
+    struct Phdr
     {
         uint32_t p_type;
         Elf32_Off p_offset;
@@ -83,7 +83,7 @@ namespace elf
     };
 
     // Errors.
-    enum class elf_errc
+    enum class Error
     {
         ER_OK = 0,           // The ELF file was loaded successfully.
         ER_BAD_ELF,          // The ELF file is badly formatted in some way.
@@ -95,16 +95,19 @@ namespace elf
     };
 
     template<typename T>
-    using ElfResult = std::expected<T, elf_errc>;
+    using Result = std::expected<T, Error>;
 
-    using AllocatorFn = std::function<ElfResult<std::span<std::byte>>(const Elf32_Phdr& phdr)>;
+    using MemorySpan = std::span<std::byte>;
+    using MemoryResult = Result<MemorySpan>;
 
-    std::string to_string(elf_errc err);
+    using AllocatorFn = std::function<MemoryResult(const Phdr& phdr)>;
 
-    ElfResult<Elf32_Ehdr> ReadElfHeader(std::istream& is, uint32_t fileSize);
-    ElfResult<Elf32_Phdr> ReadProgramHeader(std::istream& is, uint32_t fileSize);
-    ElfResult<void> ReadSegment(std::istream& is, const Elf32_Phdr& phdr, std::span<std::byte> dst);
-    ElfResult<Segments> LoadExecutable(std::istream& is, std::streampos fileSize,
-                                       AllocatorFn allocateSegment);
+    std::string to_string(Error err);
+
+    Result<Ehdr> ReadElfHeader(std::istream& is, uint32_t fileSize);
+    Result<Phdr> ReadProgramHeader(std::istream& is, uint32_t fileSize);
+    Result<void> ReadSegment(std::istream& is, const Phdr& phdr, MemorySpan dst);
+    Result<Segments> LoadExecutable(std::istream& is, std::streampos fileSize,
+                                    AllocatorFn allocateSegment);
 
 }; // namespace elf

@@ -47,9 +47,9 @@ namespace
 namespace elf
 {
 
-    std::string to_string(elf_errc err)
+    std::string to_string(Error err)
     {
-        using enum elf_errc;
+        using enum Error;
         switch (err)
         {
         case ER_OK:
@@ -68,14 +68,14 @@ namespace elf
         return "unknown";
     }
 
-    ElfResult<Elf32_Ehdr> ReadElfHeader(std::istream& is, uint32_t fileSize)
+    Result<Ehdr> ReadElfHeader(std::istream& is, uint32_t fileSize)
     {
         // Read the ELF header.
-        Elf32_Ehdr ehdr{};
+        Ehdr ehdr{};
 
         if (!is.read(reinterpret_cast<char*>(&ehdr), sizeof(ehdr)))
         {
-            return std::unexpected(elf_errc::ER_IO_FAILED);
+            return std::unexpected(Error::ER_IO_FAILED);
         }
 
         // Check the magic number.
@@ -83,49 +83,49 @@ namespace elf
         if (e_ident[EI_MAG0] != '\x7f' || e_ident[EI_MAG1] != 'E' || e_ident[EI_MAG2] != 'L'
             || e_ident[EI_MAG3] != 'F')
         {
-            return std::unexpected(elf_errc::ER_BAD_ELF);
+            return std::unexpected(Error::ER_BAD_ELF);
         }
 
         // Check that it is 32-bit.
         if (e_ident[EI_CLASS] != 1)
         {
-            return std::unexpected(elf_errc::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::ER_NOT_SUPPORTED);
         }
 
         // Check that it is two's complement, little-endian.
         if (e_ident[EI_DATA] != 1)
         {
-            return std::unexpected(elf_errc::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::ER_NOT_SUPPORTED);
         }
 
         // Check the ident version.
         if (e_ident[EI_VERSION] != 1)
         {
-            return std::unexpected(elf_errc::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::ER_NOT_SUPPORTED);
         }
 
         // Check that it is an executable.
         if (ehdr.e_type != ET_EXEC)
         {
-            return std::unexpected(elf_errc::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::ER_NOT_SUPPORTED);
         }
 
         // Check that it is for RISC-V.
         if (ehdr.e_machine != EM_RISCV)
         {
-            return std::unexpected(elf_errc::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::ER_NOT_SUPPORTED);
         }
 
         // Check the version.
         if (ehdr.e_version != 1)
         {
-            return std::unexpected(elf_errc::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::ER_NOT_SUPPORTED);
         }
 
         // Check that the size of a program header entry is what we expect it to be.
-        if (ehdr.e_phentsize != sizeof(Elf32_Phdr))
+        if (ehdr.e_phentsize != sizeof(Phdr))
         {
-            return std::unexpected(elf_errc::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::ER_NOT_SUPPORTED);
         }
 
         // Check that the program header table is beyond the ELF header and within the file.
@@ -133,25 +133,25 @@ namespace elf
         if (ehdr.e_phoff < sizeof(ehdr)
             || ehdr.e_phoff + ehdr.e_phentsize * ehdr.e_phnum > fileSize)
         {
-            return std::unexpected(elf_errc::ER_BAD_ELF);
+            return std::unexpected(Error::ER_BAD_ELF);
         }
 
         return ehdr;
     }
 
-    ElfResult<Elf32_Phdr> ReadProgramHeader(std::istream& is, uint32_t fileSize)
+    Result<Phdr> ReadProgramHeader(std::istream& is, uint32_t fileSize)
     {
         // Read a program header.
-        Elf32_Phdr phdr{};
+        Phdr phdr{};
         if (!is.read(reinterpret_cast<char*>(&phdr), sizeof(phdr)))
         {
-            return std::unexpected(elf_errc::ER_IO_FAILED);
+            return std::unexpected(Error::ER_IO_FAILED);
         }
 
         // The file size may not be larger than the memory size.
         if (phdr.p_filesz > phdr.p_memsz)
         {
-            return std::unexpected(elf_errc::ER_BAD_ELF);
+            return std::unexpected(Error::ER_BAD_ELF);
         }
 
         // TODO: other validation.
@@ -159,24 +159,24 @@ namespace elf
         return phdr;
     }
 
-    ElfResult<void> ReadSegment(std::istream& is, const Elf32_Phdr& phdr, std::span<std::byte> dst)
+    Result<void> ReadSegment(std::istream& is, const Phdr& phdr, MemorySpan dst)
     {
         // Is the destination big enough?
         if (phdr.p_memsz > dst.size_bytes())
         {
-            return std::unexpected(elf_errc::ER_INVALID_ARGUMENT);
+            return std::unexpected(Error::ER_INVALID_ARGUMENT);
         }
 
         // Zero the destination up to p_memsz.
         std::ranges::fill_n(dst.begin(), phdr.p_memsz, std::byte{});
 
-        // Copy data up to p_filesz (p_filesz <= p_memsz).
+        // Copy data up to p_filesz (we know that p_filesz <= p_memsz).
         if (phdr.p_filesz != 0)
         {
             char* dstData = reinterpret_cast<char*>(dst.data());
             if (!is.seekg(phdr.p_offset) || !is.read(dstData, phdr.p_filesz))
             {
-                return std::unexpected(elf_errc::ER_IO_FAILED);
+                return std::unexpected(Error::ER_IO_FAILED);
             }
         }
 
@@ -185,7 +185,7 @@ namespace elf
 
     namespace
     {
-        Segments& UpdateSegmentAddresses(const Elf32_Phdr& phdr, Segments& segments)
+        Segments& UpdateSegmentAddresses(const Phdr& phdr, Segments& segments)
         {
             const auto paddr = phdr.p_paddr;
             const auto vaddr = phdr.p_vaddr;
@@ -259,8 +259,8 @@ namespace elf
         }
     } // namespace
 
-    ElfResult<Segments> LoadExecutable(std::istream& is, std::streampos fileSize,
-                                       AllocatorFn allocateSegment)
+    Result<Segments> LoadExecutable(std::istream& is, std::streampos fileSize,
+                                    AllocatorFn allocateSegment)
     {
         auto ehdr = ReadElfHeader(is, fileSize);
         if (!ehdr)
@@ -271,11 +271,11 @@ namespace elf
         // Go to the start of the program header table.
         if (!is.seekg(ehdr->e_phoff))
         {
-            return std::unexpected(elf_errc::ER_IO_FAILED);
+            return std::unexpected(Error::ER_IO_FAILED);
         }
 
         // Read the program headers.
-        std::vector<Elf32_Phdr> phdrs;
+        std::vector<Phdr> phdrs;
         phdrs.reserve(ehdr->e_phnum);
         for (uint16_t i = 0; i < ehdr->e_phnum; i++)
         {
@@ -304,17 +304,14 @@ namespace elf
             auto segment = allocateSegment(phdr);
             if (!segment)
             {
-                return std::unexpected(elf_errc::ER_IO_FAILED);
+                return std::unexpected(segment.error());
             }
 
-            // Zero the memory.
-            std::ranges::fill(*segment, std::byte{});
-
-            // Load the segment data into the segment memory.
-            char* dstData = reinterpret_cast<char*>(segment->data());
-            if (!is.seekg(phdr.p_offset) || !is.read(dstData, phdr.p_filesz))
+            // Read it.
+            auto result = ReadSegment(is, phdr, *segment);
+            if (!result)
             {
-                return std::unexpected(elf_errc::ER_IO_FAILED);
+                return std::unexpected(result.error());
             }
         }
         return segments;
