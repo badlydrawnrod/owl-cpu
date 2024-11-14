@@ -6,7 +6,7 @@
 #include <functional>
 #include <istream>
 #include <span>
-#include <string>
+#include <string_view>
 #include <vector>
 
 // ELF format references:
@@ -82,13 +82,13 @@ namespace elf
     // Errors.
     enum class Error
     {
-        OK = 0,            // The ELF file was loaded successfully.
-        BAD_ELF,           // The ELF file is badly formatted in some way.
-        INVALID_ARGUMENT,  // The caller passed a bad argument.
-        IO_FAILED,         // An I/O operation failed while reading the ELF file.
-        NOT_SUPPORTED,     // The loader doesn't support some aspect of the ELF file, e.g., it isn't
-                           // RISC-V.
-        ALLOCATION_FAILED, // Unable to allocate memory.
+        ok,               // The ELF file was loaded successfully.
+        badElf,           // The ELF file is badly formatted in some way.
+        invalidArgument,  // The caller passed a bad argument.
+        ioFailed,         // An I/O operation failed while reading the ELF file.
+        notSupported,     // The loader doesn't support some aspect of the ELF file, e.g., it isn't
+                          // RISC-V.
+        allocationFailed, // Unable to allocate memory.
     };
 
     template<typename T>
@@ -99,7 +99,7 @@ namespace elf
 
     using AllocatorFn = std::function<MemoryResult(const Phdr& phdr)>;
 
-    std::string to_string(Error err);
+    std::string_view ErrorString(Error err);
 
     Result<Ehdr> ReadElfHeader(std::istream& is, uint32_t fileSize);
     Result<Phdr> ReadProgramHeader(std::istream& is, uint32_t fileSize);
