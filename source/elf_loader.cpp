@@ -187,17 +187,17 @@ auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
 
 namespace
 {
-    Loaded& UpdateLoaded(const Elf32_Phdr& phdr, Loaded& loaded)
+    Segments& UpdateSegmentAddresses(const Elf32_Phdr& phdr, Segments& segments)
     {
         const auto paddr = phdr.p_paddr;
         const auto vaddr = phdr.p_vaddr;
         const auto memsz = phdr.p_memsz;
         const auto filesz = phdr.p_filesz;
 
-        auto& lma = loaded.lma;
-        auto& vma = loaded.vma;
-        auto& startRom = loaded.startRom;
-        auto& endRom = loaded.endRom;
+        auto& lma = segments.lma;
+        auto& vma = segments.vma;
+        auto& startRom = segments.startRom;
+        auto& endRom = segments.endRom;
 
         if (phdr.p_flags & PF_X)
         {
@@ -256,12 +256,12 @@ namespace
             }
         }
 
-        return loaded;
+        return segments;
     }
 } // namespace
 
 auto LoadExecutable(std::istream& is, std::streampos fileSize,
-                    AllocatorFn allocateSegment) -> ElfResult<Loaded>
+                    AllocatorFn allocateSegment) -> ElfResult<Segments>
 {
     auto ehdr = ReadElfHeader(is, fileSize);
     if (!ehdr)
@@ -291,12 +291,15 @@ auto LoadExecutable(std::istream& is, std::streampos fileSize,
         }
     }
 
-    Loaded loaded{};
+    Segments segments{};
+
+    // Set the entry point.
+    segments.entry = ehdr->e_entry;
 
     // Load each loadable segment.
     for (const auto& phdr : phdrs)
     {
-        UpdateLoaded(phdr, loaded);
+        UpdateSegmentAddresses(phdr, segments);
 
         // Get some memory for the segment.
         auto segment = allocateSegment(phdr);
@@ -315,5 +318,5 @@ auto LoadExecutable(std::istream& is, std::streampos fileSize,
             return std::unexpected(elf_errc::ER_IO_FAILED);
         }
     }
-    return loaded;
+    return segments;
 }

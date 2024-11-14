@@ -50,8 +50,7 @@ struct Elf32_Phdr
     uint32_t p_align;
 };
 
-// TODO: Needs a better name.
-struct LoadAddresses
+struct SegmentAddresses
 {
     // Code.
     uint32_t startText = 0;
@@ -67,13 +66,17 @@ struct LoadAddresses
     uint32_t endBss = 0;
 };
 
-// TODO: Needs a better name.
-struct Loaded
+struct Segments
 {
-    LoadAddresses lma{}; // Where the segments are loaded to.
-    LoadAddresses vma{}; // Where they are logically.
+    uint32_t entry = 0; // The program's entry point.
+
+    // Encompasses everything read-only, i.e., text, rodata and (on a system with flash) initialized
+    // data.
     uint32_t startRom = 0;
     uint32_t endRom = 0;
+
+    SegmentAddresses lma{}; // Where the segments are loaded to.
+    SegmentAddresses vma{}; // Where they are logically.
 };
 
 // Errors.
@@ -100,4 +103,4 @@ auto ReadProgramHeader(std::istream& is, uint32_t fileSize) -> ElfResult<Elf32_P
 auto ReadSegment(std::istream& is, const Elf32_Phdr& phdr,
                  std::span<std::byte> dst) -> ElfResult<void>;
 auto LoadExecutable(std::istream& is, std::streampos fileSize,
-                    AllocatorFn allocateSegment) -> ElfResult<Loaded>;
+                    AllocatorFn allocateSegment) -> ElfResult<Segments>;

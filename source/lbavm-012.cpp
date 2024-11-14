@@ -18,6 +18,8 @@
 #include <span>
 #include <vector>
 
+constexpr size_t memorySize = 0x8000;
+
 void Run(std::span<uint32_t> image, std::span<uint32_t> text)
 {
     OwlCpu cpu(image, text);
@@ -79,7 +81,7 @@ void DisassembleRv32i(std::span<uint32_t> image)
 struct Image
 {
     std::vector<uint32_t> image;
-    Loaded loaded;
+    Segments segments;
 };
 
 auto LoadElfImage(const char* filename) -> ElfResult<Image>
@@ -92,7 +94,6 @@ auto LoadElfImage(const char* filename) -> ElfResult<Image>
     }
 
     // The memory that we're going to sub-allocate.
-    constexpr size_t memorySize = 0x8000; // TODO: don't hard code.
     std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
     // The world's most rudimentary segment allocator.
@@ -108,42 +109,13 @@ auto LoadElfImage(const char* filename) -> ElfResult<Image>
         return dst.subspan(paddr, memsz);
     };
 
-    auto loaded = LoadExecutable(ifs, fileSize, Allocate);
-    if (!loaded)
+    auto segments = LoadExecutable(ifs, fileSize, Allocate);
+    if (!segments)
     {
-        return std::unexpected(loaded.error());
+        return std::unexpected(segments.error());
     }
 
-    const auto& lma = loaded->lma;
-    const auto& vma = loaded->vma;
-    const auto startRom = loaded->startRom;
-    const auto endRom = loaded->endRom;
-
-    std::cout << "LMA\n";
-    std::cout << std::format("  text start: {:08x} end: {:08x} size: {:08x}\n", lma.startText,
-                             lma.endText, lma.endText - lma.startText);
-    std::cout << std::format("rodata start: {:08x} end: {:08x} size: {:08x}\n", lma.startRoData,
-                             lma.endRoData, lma.endRoData - lma.startRoData);
-    std::cout << std::format("  data start: {:08x} end: {:08x} size: {:08x}\n", lma.startData,
-                             lma.endData, lma.endData - lma.startData);
-    std::cout << std::format("   bss start: {:08x} end: {:08x} size: {:08x}\n", lma.startBss,
-                             lma.endBss, lma.endBss - lma.startBss);
-
-    std::cout << "VMA\n";
-    std::cout << std::format("  text start: {:08x} end: {:08x} size: {:08x}\n", vma.startText,
-                             vma.endText, vma.endText - vma.startText);
-    std::cout << std::format("rodata start: {:08x} end: {:08x} size: {:08x}\n", vma.startRoData,
-                             vma.endRoData, vma.endRoData - vma.startRoData);
-    std::cout << std::format("  data start: {:08x} end: {:08x} size: {:08x}\n", vma.startData,
-                             vma.endData, vma.endData - vma.startData);
-    std::cout << std::format("   bss start: {:08x} end: {:08x} size: {:08x}\n", vma.startBss,
-                             vma.endBss, vma.endBss - vma.startBss);
-
-    std::cout << "ROM\n";
-    std::cout << std::format("   rom start: {:08x} end: {:08x} size: {:08x}\n", startRom, endRom,
-                             endRom - startRom);
-
-    return Image{.image = image, .loaded = *loaded};
+    return Image{.image = image, .segments = *segments};
 }
 
 int main(int argc, char* argv[])
@@ -165,9 +137,9 @@ int main(int argc, char* argv[])
         }
 
         auto& rv32iImage = loadedImage->image;
-        const uint32_t textStart = loadedImage->loaded.lma.startText;
+        const uint32_t textStart = loadedImage->segments.lma.startText;
         const uint32_t textSize =
-                loadedImage->loaded.lma.endText - loadedImage->loaded.lma.startText;
+                loadedImage->segments.lma.endText - loadedImage->segments.lma.startText;
 
         // Find the code in the loaded image.
         std::span<uint32_t> rv32iText(rv32iImage.begin() + textStart / sizeof(uint32_t),
@@ -177,11 +149,13 @@ int main(int argc, char* argv[])
         DisassembleRv32i(rv32iText);
 
         // Create a memory image.
-        constexpr size_t memorySize = 0x8000; // 32K
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
         // Copy the entire loaded image into the memory image.
         std::ranges::copy(rv32iImage, image.begin());
+
+        // TODO: technically we should also handle the entry point, but here we're relying on the
+        // default being zero.
 
         std::cout << "Running RISC-V encoded instructions...\n";
         RunRv32i(image);
