@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
         auto loadedImage = LoadElfImage(argv[1]);
         if (!loadedImage)
         {
-            std::cerr << "Failed to load ELF image: " << elf::ErrorString(loadedImage.error()) << '\n';
+            std::cerr << "Failed to load ELF image: " << loadedImage.error() << '\n';
             return 1;
         }
 

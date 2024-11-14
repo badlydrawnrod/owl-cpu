@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <expected>
 #include <functional>
-#include <istream>
+#include <iostream>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -15,7 +15,6 @@
 
 namespace elf
 {
-
     constexpr size_t EI_NIDENT = 16;
 
     // ELF header (Ehdr).
@@ -100,6 +99,11 @@ namespace elf
     using AllocatorFn = std::function<MemoryResult(const Phdr& phdr)>;
 
     std::string_view ErrorString(Error err);
+
+    inline std::ostream& operator<<(std::ostream& os, Error err)
+    {
+        return os << ErrorString(err);
+    }
 
     Result<Ehdr> ReadElfHeader(std::istream& is, uint32_t fileSize);
     Result<Phdr> ReadProgramHeader(std::istream& is, uint32_t fileSize);
