@@ -308,15 +308,9 @@ auto LoadExecutable(std::istream& is, std::streampos fileSize,
         // Zero the memory.
         std::ranges::fill(*segment, std::byte{});
 
-        // Seek to the start of the segment data for this program header.
-        if (!is.seekg(phdr.p_offset))
-        {
-            return std::unexpected(elf_errc::ER_IO_FAILED);
-        }
-
         // Load the segment data into the segment memory.
         char* dstData = reinterpret_cast<char*>(segment->data());
-        if (!is.read(dstData, phdr.p_filesz))
+        if (!is.seekg(phdr.p_offset) || !is.read(dstData, phdr.p_filesz))
         {
             return std::unexpected(elf_errc::ER_IO_FAILED);
         }
