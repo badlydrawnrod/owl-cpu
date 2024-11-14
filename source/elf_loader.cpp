@@ -10,6 +10,7 @@
 
 namespace
 {
+    // ehdr.e_ident indexes.
     enum
     {
         EI_MAG0 = 0,
@@ -21,6 +22,25 @@ namespace
         EI_VERSION
     };
 
+    // ehdr.e_type values.
+    enum
+    {
+        ET_EXEC = 2
+    };
+
+    // ehdr.e_machine values.
+    enum
+    {
+        EM_RISCV = 0xf3
+    };
+
+    // phdr.p_type values.
+    enum
+    {
+        PT_LOAD = 1
+    };
+
+    // phdr.p_flags flag values.
     enum
     {
         PF_X = 1,
@@ -28,20 +48,6 @@ namespace
         PF_R = 4
     };
 
-    enum
-    {
-        ET_EXEC = 2
-    };
-
-    enum
-    {
-        EM_RISCV = 0xf3
-    };
-
-    enum
-    {
-        PT_LOAD = 1
-    };
 } // namespace
 
 namespace elf
