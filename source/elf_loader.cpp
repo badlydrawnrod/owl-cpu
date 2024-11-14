@@ -52,17 +52,17 @@ namespace elf
         using enum Error;
         switch (err)
         {
-        case ER_OK:
+        case OK:
             return "ok";
-        case ER_BAD_ELF:
+        case BAD_ELF:
             return "badly formatted ELF file";
-        case ER_INVALID_ARGUMENT:
+        case INVALID_ARGUMENT:
             return "invalid argument";
-        case ER_IO_FAILED:
+        case IO_FAILED:
             return "i/o failed";
-        case ER_NOT_SUPPORTED:
+        case NOT_SUPPORTED:
             return "not supported";
-        case ER_ALLOCATION_FAILED:
+        case ALLOCATION_FAILED:
             return "allocation failed";
         }
         return "unknown";
@@ -75,7 +75,7 @@ namespace elf
 
         if (!is.read(reinterpret_cast<char*>(&ehdr), sizeof(ehdr)))
         {
-            return std::unexpected(Error::ER_IO_FAILED);
+            return std::unexpected(Error::IO_FAILED);
         }
 
         // Check the magic number.
@@ -83,49 +83,49 @@ namespace elf
         if (e_ident[EI_MAG0] != '\x7f' || e_ident[EI_MAG1] != 'E' || e_ident[EI_MAG2] != 'L'
             || e_ident[EI_MAG3] != 'F')
         {
-            return std::unexpected(Error::ER_BAD_ELF);
+            return std::unexpected(Error::BAD_ELF);
         }
 
         // Check that it is 32-bit.
         if (e_ident[EI_CLASS] != 1)
         {
-            return std::unexpected(Error::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::NOT_SUPPORTED);
         }
 
         // Check that it is two's complement, little-endian.
         if (e_ident[EI_DATA] != 1)
         {
-            return std::unexpected(Error::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::NOT_SUPPORTED);
         }
 
         // Check the ident version.
         if (e_ident[EI_VERSION] != 1)
         {
-            return std::unexpected(Error::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::NOT_SUPPORTED);
         }
 
         // Check that it is an executable.
         if (ehdr.e_type != ET_EXEC)
         {
-            return std::unexpected(Error::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::NOT_SUPPORTED);
         }
 
         // Check that it is for RISC-V.
         if (ehdr.e_machine != EM_RISCV)
         {
-            return std::unexpected(Error::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::NOT_SUPPORTED);
         }
 
         // Check the version.
         if (ehdr.e_version != 1)
         {
-            return std::unexpected(Error::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::NOT_SUPPORTED);
         }
 
         // Check that the size of a program header entry is what we expect it to be.
         if (ehdr.e_phentsize != sizeof(Phdr))
         {
-            return std::unexpected(Error::ER_NOT_SUPPORTED);
+            return std::unexpected(Error::NOT_SUPPORTED);
         }
 
         // Check that the program header table is beyond the ELF header and within the file.
@@ -133,7 +133,7 @@ namespace elf
         if (ehdr.e_phoff < sizeof(ehdr)
             || ehdr.e_phoff + ehdr.e_phentsize * ehdr.e_phnum > fileSize)
         {
-            return std::unexpected(Error::ER_BAD_ELF);
+            return std::unexpected(Error::BAD_ELF);
         }
 
         return ehdr;
@@ -145,13 +145,13 @@ namespace elf
         Phdr phdr{};
         if (!is.read(reinterpret_cast<char*>(&phdr), sizeof(phdr)))
         {
-            return std::unexpected(Error::ER_IO_FAILED);
+            return std::unexpected(Error::IO_FAILED);
         }
 
         // The file size may not be larger than the memory size.
         if (phdr.p_filesz > phdr.p_memsz)
         {
-            return std::unexpected(Error::ER_BAD_ELF);
+            return std::unexpected(Error::BAD_ELF);
         }
 
         // TODO: other validation.
@@ -164,7 +164,7 @@ namespace elf
         // Is the destination big enough?
         if (phdr.p_memsz > dst.size_bytes())
         {
-            return std::unexpected(Error::ER_INVALID_ARGUMENT);
+            return std::unexpected(Error::INVALID_ARGUMENT);
         }
 
         // Copy data up to p_filesz (we know that p_filesz <= p_memsz).
@@ -173,7 +173,7 @@ namespace elf
             char* dstData = reinterpret_cast<char*>(dst.data());
             if (!is.seekg(phdr.p_offset) || !is.read(dstData, phdr.p_filesz))
             {
-                return std::unexpected(Error::ER_IO_FAILED);
+                return std::unexpected(Error::IO_FAILED);
             }
         }
 
@@ -271,7 +271,7 @@ namespace elf
         // Go to the start of the program header table.
         if (!is.seekg(ehdr->e_phoff))
         {
-            return std::unexpected(Error::ER_IO_FAILED);
+            return std::unexpected(Error::IO_FAILED);
         }
 
         // Read the program headers.

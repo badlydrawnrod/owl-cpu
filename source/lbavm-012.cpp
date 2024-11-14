@@ -90,7 +90,7 @@ elf::Result<Image> LoadElfImage(const char* filename)
     auto fileSize = ifs.tellg();
     if (!ifs.seekg(0))
     {
-        return std::unexpected(elf::Error::ER_IO_FAILED);
+        return std::unexpected(elf::Error::IO_FAILED);
     }
 
     // The memory that we're going to sub-allocate.
@@ -103,7 +103,7 @@ elf::Result<Image> LoadElfImage(const char* filename)
         auto dst = std::as_writable_bytes(std::span(image));
         if (paddr + memsz > dst.size())
         {
-            return std::unexpected(elf::Error::ER_INVALID_ARGUMENT);
+            return std::unexpected(elf::Error::INVALID_ARGUMENT);
         }
 
         return dst.subspan(paddr, memsz);

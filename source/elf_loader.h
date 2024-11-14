@@ -82,13 +82,13 @@ namespace elf
     // Errors.
     enum class Error
     {
-        ER_OK = 0,           // The ELF file was loaded successfully.
-        ER_BAD_ELF,          // The ELF file is badly formatted in some way.
-        ER_INVALID_ARGUMENT, // The caller passed a bad argument.
-        ER_IO_FAILED,        // An I/O operation failed while reading the ELF file.
-        ER_NOT_SUPPORTED, // The loader doesn't support some aspect of the ELF file, e.g., it isn't
-                          // RISC-V.
-        ER_ALLOCATION_FAILED, // Unable to allocate memory.
+        OK = 0,            // The ELF file was loaded successfully.
+        BAD_ELF,           // The ELF file is badly formatted in some way.
+        INVALID_ARGUMENT,  // The caller passed a bad argument.
+        IO_FAILED,         // An I/O operation failed while reading the ELF file.
+        NOT_SUPPORTED,     // The loader doesn't support some aspect of the ELF file, e.g., it isn't
+                           // RISC-V.
+        ALLOCATION_FAILED, // Unable to allocate memory.
     };
 
     template<typename T>
