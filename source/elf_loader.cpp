@@ -286,12 +286,11 @@ namespace elf
         phdrs.reserve(ehdr->e_phnum);
         for (uint16_t i = 0; i < ehdr->e_phnum; i++)
         {
-            auto phdr = ReadProgramHeader(is, fileSize);
-            if (!phdr)
+            if (auto phdr = ReadProgramHeader(is, fileSize); !phdr)
             {
                 return std::unexpected(phdr.error());
             }
-            if (phdr->p_type == PT_LOAD)
+            else if (phdr->p_type == PT_LOAD)
             {
                 phdrs.push_back(*phdr);
             }
