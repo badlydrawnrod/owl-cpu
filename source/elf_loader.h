@@ -18,9 +18,6 @@ namespace elf
 
     constexpr size_t EI_NIDENT = 16;
 
-    using Elf32_Addr = uint32_t;
-    using Elf32_Off = uint32_t;
-
     // ELF header (Ehdr).
     struct Ehdr
     {
@@ -28,9 +25,9 @@ namespace elf
         uint16_t e_type;
         uint16_t e_machine;
         uint32_t e_version;
-        Elf32_Addr e_entry;
-        Elf32_Off e_phoff;
-        Elf32_Off e_shoff;
+        uint32_t e_entry;
+        uint32_t e_phoff;
+        uint32_t e_shoff;
         uint32_t e_flags;
         uint16_t e_ehsize;
         uint16_t e_phentsize;
@@ -44,9 +41,9 @@ namespace elf
     struct Phdr
     {
         uint32_t p_type;
-        Elf32_Off p_offset;
-        Elf32_Addr p_vaddr;
-        Elf32_Addr p_paddr;
+        uint32_t p_offset;
+        uint32_t p_vaddr;
+        uint32_t p_paddr;
         uint32_t p_filesz;
         uint32_t p_memsz;
         uint32_t p_flags;

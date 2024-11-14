@@ -167,9 +167,6 @@ namespace elf
             return std::unexpected(Error::ER_INVALID_ARGUMENT);
         }
 
-        // Zero the destination up to p_memsz.
-        std::ranges::fill_n(dst.begin(), phdr.p_memsz, std::byte{});
-
         // Copy data up to p_filesz (we know that p_filesz <= p_memsz).
         if (phdr.p_filesz != 0)
         {
@@ -179,6 +176,9 @@ namespace elf
                 return std::unexpected(Error::ER_IO_FAILED);
             }
         }
+
+        // Zero the destination from p_filesz up to p_memsz.
+        std::ranges::fill_n(dst.begin() + phdr.p_filesz, phdr.p_memsz - phdr.p_filesz, std::byte{});
 
         return {};
     }
@@ -243,7 +243,7 @@ namespace elf
                 }
                 else
                 {
-                    // Both initialized data and uninitialized data.
+                    // Initialized data and zero or more bytes of uninitialized data.
                     lma.startBss = paddr + filesz;
                     lma.endBss = paddr + memsz;
                     vma.startBss = vaddr;
