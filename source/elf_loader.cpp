@@ -194,6 +194,11 @@ namespace elf
     {
         Segments& UpdateSegmentAddresses(const Phdr& phdr, Segments& segments)
         {
+            // Assumptions:
+            // - there is only one executable segment and it always comes first
+            // - there is only one read-only segment
+            // - uninitialized data, i.e., BSS, always comes last
+
             const auto paddr = phdr.p_paddr;
             const auto vaddr = phdr.p_vaddr;
             const auto memsz = phdr.p_memsz;
@@ -201,27 +206,21 @@ namespace elf
 
             auto& lma = segments.lma;
             auto& vma = segments.vma;
-            auto& startRom = segments.startRom;
-            auto& endRom = segments.endRom;
+            auto& rom = segments.rom;
 
             if (phdr.p_flags & PF_X)
             {
                 // Executable segment.
-                lma.startText = paddr;
-                lma.endText = paddr + filesz;
-                vma.startText = vaddr;
-                vma.endText = vaddr + filesz;
-                startRom = paddr;
-                endRom = paddr + filesz;
+                lma.code = {.start = paddr, .size = filesz};
+                vma.code = {.start = vaddr, .size = filesz};
+                rom = {.start = paddr, .size = filesz};
             }
             else if (phdr.p_flags == PF_R)
             {
                 // Read-only segment.
-                lma.startRoData = paddr;
-                lma.endRoData = paddr + filesz;
-                vma.startRoData = vaddr;
-                vma.endRoData = vaddr + filesz;
-                endRom = paddr + filesz;
+                lma.rodata = {.start = paddr, .size = filesz};
+                vma.rodata = {.start = vaddr, .size = filesz};
+                rom.size = paddr + filesz - rom.start;
             }
             else if (phdr.p_flags == (PF_R | PF_W))
             {
@@ -229,36 +228,28 @@ namespace elf
                 if (memsz == filesz)
                 {
                     // Initialized data only.
-                    lma.startData = paddr;
-                    lma.endData = paddr + filesz;
-                    vma.startData = vaddr;
-                    vma.endData = vaddr + filesz;
+                    lma.data = {.start = paddr, .size = filesz};
+                    vma.data = {.start = vaddr, .size = filesz};
                     if (paddr != vaddr)
                     {
                         // The initialized data is copied from read-only memory to read-write
                         // memory.
-                        endRom = paddr + filesz;
+                        rom.size = paddr + filesz - rom.start;
                     }
                 }
                 else if (filesz == 0)
                 {
                     // Uninitialized data only.
-                    lma.startBss = paddr;
-                    lma.endBss = paddr + memsz;
-                    vma.startBss = vaddr;
-                    vma.endBss = vaddr + memsz;
+                    lma.bss = {.start = paddr, .size = memsz};
+                    vma.bss = {.start = vaddr, .size = memsz};
                 }
                 else
                 {
                     // Initialized data and zero or more bytes of uninitialized data.
-                    lma.startBss = paddr + filesz;
-                    lma.endBss = paddr + memsz;
-                    vma.startBss = vaddr;
-                    vma.endBss = vaddr + memsz;
-                    lma.startData = paddr;
-                    lma.endData = paddr + filesz;
-                    vma.startData = vaddr;
-                    vma.endData = vaddr + filesz;
+                    lma.data = {.start = paddr, .size = filesz};
+                    vma.data = {.start = vaddr, .size = filesz};
+                    lma.bss = {.start = paddr + filesz, .size = memsz - filesz};
+                    vma.bss = {.start = vaddr + filesz, .size = memsz - filesz};
                 }
             }
 
@@ -281,6 +272,9 @@ namespace elf
             return std::unexpected(Error::ioFailed);
         }
 
+        Segments segments{};
+        segments.entry = ehdr->e_entry;
+
         // Read the program headers.
         std::vector<Phdr> phdrs;
         phdrs.reserve(ehdr->e_phnum);
@@ -293,19 +287,13 @@ namespace elf
             else if (phdr->p_type == PT_LOAD)
             {
                 phdrs.push_back(*phdr);
+                UpdateSegmentAddresses(*phdr, segments);
             }
         }
-
-        Segments segments{};
-
-        // Set the entry point.
-        segments.entry = ehdr->e_entry;
 
         // Load each loadable segment.
         for (const auto& phdr : phdrs)
         {
-            UpdateSegmentAddresses(phdr, segments);
-
             // Get some memory for the segment.
             auto segment = allocateSegment(phdr);
             if (!segment)

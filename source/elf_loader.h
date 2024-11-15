@@ -49,20 +49,18 @@ namespace elf
         uint32_t p_align;
     };
 
+    struct Block
+    {
+        uint32_t start = 0;
+        uint32_t size = 0;
+    };
+
     struct SegmentAddresses
     {
-        // Code.
-        uint32_t startText = 0;
-        uint32_t endText = 0;
-        // Read-only data.
-        uint32_t startRoData = 0;
-        uint32_t endRoData = 0;
-        // Initialized data.
-        uint32_t startData = 0;
-        uint32_t endData = 0;
-        // Uninitialized data.
-        uint32_t startBss = 0;
-        uint32_t endBss = 0;
+        Block code{};
+        Block rodata{};
+        Block data{};
+        Block bss{};
     };
 
     struct Segments
@@ -71,8 +69,7 @@ namespace elf
 
         // Encompasses everything read-only, i.e., text, rodata and (on a system with flash)
         // initialized data.
-        uint32_t startRom = 0;
-        uint32_t endRom = 0;
+        Block rom{};
 
         SegmentAddresses lma{}; // Where the segments are loaded to.
         SegmentAddresses vma{}; // Where they are logically.
