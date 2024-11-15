@@ -81,7 +81,8 @@ void DisassembleRv32i(std::span<uint32_t> image)
 struct Image
 {
     std::vector<uint32_t> image;
-    elf::Segments segments;
+    uint32_t textStart;
+    uint32_t textSize;
 };
 
 elf::Result<Image> LoadElfImage(const char* filename)
@@ -115,7 +116,10 @@ elf::Result<Image> LoadElfImage(const char* filename)
         return std::unexpected(segments.error());
     }
 
-    return Image{.image = image, .segments = *segments};
+    const uint32_t textStart = segments->lma.startText / sizeof(uint32_t);
+    const uint32_t textSize = (segments->lma.endText - segments->lma.startText) / sizeof(uint32_t);
+
+    return Image{.image = image, .textStart = textStart, .textSize = textSize};
 }
 
 int main(int argc, char* argv[])
@@ -136,14 +140,10 @@ int main(int argc, char* argv[])
             return 1;
         }
 
-        auto& rv32iImage = loadedImage->image;
-        const uint32_t textStart = loadedImage->segments.lma.startText;
-        const uint32_t textSize =
-                loadedImage->segments.lma.endText - loadedImage->segments.lma.startText;
-
         // Find the code in the loaded image.
-        std::span<uint32_t> rv32iText(rv32iImage.begin() + textStart / sizeof(uint32_t),
-                                      textSize / sizeof(uint32_t));
+        auto& rv32iImage = loadedImage->image;
+        std::span<uint32_t> rv32iText(rv32iImage.begin() + loadedImage->textStart,
+                                      loadedImage->textSize);
 
         std::cout << "Disassembling RISC-V encoded instructions...\n";
         DisassembleRv32i(rv32iText);
@@ -153,9 +153,6 @@ int main(int argc, char* argv[])
 
         // Copy the entire loaded image into the memory image.
         std::ranges::copy(rv32iImage, image.begin());
-
-        // TODO: technically we should also handle the entry point, but here we're relying on the
-        // default being zero.
 
         std::cout << "Running RISC-V encoded instructions...\n";
         RunRv32i(image);
