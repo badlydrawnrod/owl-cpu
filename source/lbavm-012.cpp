@@ -78,12 +78,10 @@ void DisassembleRv32i(std::span<uint32_t> image)
     }
 }
 
-using Block32 = elf::Block<uint32_t>;
-
 struct Image
 {
     std::vector<uint32_t> image;
-    Block32 code;
+    std::span<uint32_t> code;
 };
 
 elf::Result<Image> LoadElfImage(const char* filename)
@@ -117,7 +115,9 @@ elf::Result<Image> LoadElfImage(const char* filename)
         return std::unexpected(segments.error());
     }
 
-    auto code = Block32(segments->lma.code);
+    const auto start = segments->lma.code.start / sizeof(uint32_t);
+    const auto size = segments->lma.code.size / sizeof(uint32_t);
+    auto code = std::span(image.data() + start, size);
 
     return Image{.image = image, .code = code};
 }
@@ -141,9 +141,8 @@ int main(int argc, char* argv[])
         }
 
         // Find the code in the loaded image.
-        auto& rv32iImage = loadedImage->image;
-        std::span<uint32_t> rv32iText(rv32iImage.begin() + loadedImage->code.start,
-                                      loadedImage->code.size);
+        const auto& rv32iImage = loadedImage->image;
+        const auto& rv32iText = loadedImage->code;
 
         std::cout << "Disassembling RISC-V encoded instructions...\n";
         DisassembleRv32i(rv32iText);
