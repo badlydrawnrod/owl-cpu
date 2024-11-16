@@ -7,7 +7,6 @@
 #include <iostream>
 #include <span>
 #include <string_view>
-#include <vector>
 
 // ELF format references:
 // https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
