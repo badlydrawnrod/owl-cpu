@@ -14,13 +14,13 @@ inline std::byte Read8(const Memory memory, uint32_t addr)
     return memory[addr];
 }
 
-inline std::uint16_t Read16(const Memory memory, uint32_t addr)
+inline uint16_t Read16(const Memory memory, uint32_t addr)
 {
     // Owl-2820 is permissive about unaligned memory accesses. This may not be the case for
     // the host platform, so we do the equivalent of a memcpy from the VM's memory before
     // trying to interpret the value. Most compilers will detect what we're doing and
     // optimize it away.
-    uint16_t v;
+    uint16_t v{};
     std::ranges::copy_n(memory.data() + addr, sizeof(v), reinterpret_cast<std::byte*>(&v));
 
     // Owl-2820 is little-endian, so swap the byte order if necessary.
@@ -33,7 +33,7 @@ inline uint32_t Read32(const Memory memory, uint32_t addr)
     // the host platform, so we do the equivalent of a memcpy from the VM's memory before
     // trying to interpret the value. Most compilers will detect what we're doing and
     // optimize it away.
-    uint32_t v;
+    uint32_t v{};
     std::ranges::copy_n(memory.data() + addr, sizeof(uint32_t), reinterpret_cast<std::byte*>(&v));
 
     // Owl-2820 is little-endian, so swap the byte order if necessary.
