@@ -56,7 +56,7 @@ namespace elf
         uint32_t size = 0;
 
         template<typename U>
-        explicit operator Block<U>()
+        explicit operator Block<U>() const noexcept
         {
             const uint32_t newStart = (start * sizeof(T)) / sizeof(U);
             const uint32_t newSize = (size * sizeof(T)) / sizeof(U);
