@@ -1,1 +1,1 @@
-clang -DUSE_FLASH -Os --target=riscv32 -march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nodefaultlibs ./source/crt0.S ./source/fortune-owl.c -fuse-ld=lld "-Wl,--gc-sections" -T./source/memory_flash.ld -T./source/sections.ld -o out/a.out
+clang -DUSE_FLASH -Os --target=riscv32 -march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nodefaultlibs ./source/crt0.S ./source/fortune.c -fuse-ld=lld "-Wl,--gc-sections" -T./source/memory_flash.ld -T./source/sections.ld -o out/a.out
