@@ -3,6 +3,8 @@
 #include <cstdint>
 
 // Opcodes.
+// This project uses camelCase not PascalCase for enumerators. However, 'and', 'or', and 'xor' are
+// alternative tokens for '&&', '||' and '^', so the compiler naturally complains.
 enum class Opcode : uint32_t
 {
     Illegal = 0,

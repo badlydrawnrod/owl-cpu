@@ -45,13 +45,13 @@ enum
     t6
 };
 
-enum Syscall
+enum class Syscall
 {
-    Exit,
-    PrintFib,
-    Puts,
-    Randomize,
-    Random
+    exit,
+    printFib,
+    puts,
+    randomize,
+    random
 };
 
 class OwlCpu
@@ -106,25 +106,25 @@ public:
         const auto syscall = Syscall(x[a7]);
         switch (syscall)
         {
-        case Syscall::Exit:
+        case Syscall::exit:
             std::cout << "Exiting with status " << x[a0] << '\n';
             done = true;
             break;
 
-        case Syscall::PrintFib:
+        case Syscall::printFib:
             std::cout << "fib(" << x[a0] << ") = " << x[a1] << '\n';
             break;
 
-        case Syscall::Randomize:
+        case Syscall::randomize:
             std::srand(time(nullptr));
             break;
 
-        case Syscall::Random:
+        case Syscall::random:
             // TODO: Do *not* try this at home. What if a0 contains zero?
             x[a0] = std::rand() % x[a0];
             break;
 
-        case Syscall::Puts:
+        case Syscall::puts:
             // TODO: Do *not* try this at home without at least a bounds check.
             // Who knows what horrors the user-mode code is giving us.
             std::puts(reinterpret_cast<const char*>(memory.data()) + x[a0]);
