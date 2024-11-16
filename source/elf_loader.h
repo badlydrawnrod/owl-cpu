@@ -58,9 +58,9 @@ namespace elf
         template<typename U>
         explicit operator Block<U>()
         {
-            const uint32_t start = (start * sizeof(T)) / sizeof(U);
-            const uint32_t size = (size * sizeof(T)) / sizeof(U);
-            return Block<U>{.start = start, .size = size};
+            const uint32_t newStart = (start * sizeof(T)) / sizeof(U);
+            const uint32_t newSize = (size * sizeof(T)) / sizeof(U);
+            return Block<U>{.start = newStart, .size = newSize};
         }
     };
 
