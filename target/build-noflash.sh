@@ -1,1 +1,7 @@
-clang -Os --target=riscv32 -march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nodefaultlibs ./source/crt0.S ./source/fortune.c -fuse-ld=lld "-Wl,--gc-sections" -T./source/memory_noflash.ld -T./source/sections.ld -o out/a.out
+if [[ "$#" -ne 1 ]]; then
+    echo "Usage: $(basename $0) <filename>" >&2
+    exit 2
+fi
+
+source=$1
+clang -Os --target=riscv32 -march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nodefaultlibs ./source/crt0.S ./source/$source -fuse-ld=lld "-Wl,--gc-sections" -T./source/memory_noflash.ld -T./source/sections.ld -o out/a.out
