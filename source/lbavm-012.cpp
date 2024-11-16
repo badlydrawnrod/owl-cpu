@@ -117,9 +117,10 @@ elf::Result<Image> LoadElfImage(const char* filename)
 
     const auto start = segments->lma.code.start / sizeof(uint32_t);
     const auto size = segments->lma.code.size / sizeof(uint32_t);
+
     auto code = std::span(image.data() + start, size);
 
-    return Image{.image = image, .code = code};
+    return Image{.image = std::move(image), .code = code};
 }
 
 int main(int argc, char* argv[])
