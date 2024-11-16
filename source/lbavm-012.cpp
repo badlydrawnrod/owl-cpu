@@ -133,38 +133,34 @@ int main(int argc, char* argv[])
         }
 
         // Load the image from an ELF file.
-        auto loadedImage = LoadElfImage(argv[1]);
+        const auto loadedImage = LoadElfImage(argv[1]);
         if (!loadedImage)
         {
             std::cerr << "Failed to load ELF image: " << loadedImage.error() << '\n';
             return 1;
         }
 
-        // Find the code in the loaded image.
-        const auto& rv32iImage = loadedImage->image;
-        const auto& rv32iText = loadedImage->code;
-
         std::cout << "Disassembling RISC-V encoded instructions...\n";
-        DisassembleRv32i(rv32iText);
+        DisassembleRv32i(loadedImage->code);
 
         // Create a memory image.
         std::vector<uint32_t> image(memorySize / sizeof(uint32_t));
 
         // Copy the entire loaded image into the memory image.
-        std::ranges::copy(rv32iImage, image.begin());
+        std::ranges::copy(loadedImage->image, image.begin());
 
         std::cout << "Running RISC-V encoded instructions...\n";
         RunRv32i(image);
 
         // Transcode the code part of the image to Owl-2820 encoding.
-        auto owlText = Rv32iToOwl(rv32iText);
+        auto owlText = Rv32iToOwl(loadedImage->code);
 
         std::cout << "Disassembling Owl-2820 encoded instructions...\n";
         DisassembleOwl(owlText);
 
         // Copy the entire loaded image into the memory image again to re-initialize .data and
         // .sdata for non-flash images.
-        std::ranges::copy(rv32iImage, image.begin());
+        std::ranges::copy(loadedImage->image, image.begin());
 
         std::cout << "\nRunning Owl-2820 encoded instructions...\n";
         Run(image, owlText);
