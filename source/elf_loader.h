@@ -49,18 +49,28 @@ namespace elf
         uint32_t p_align;
     };
 
+    template<typename T>
     struct Block
     {
         uint32_t start = 0;
         uint32_t size = 0;
+
+        template<typename U>
+        explicit operator Block<U>()
+        {
+            return Block<U>{.start = (start * sizeof(T)) / sizeof(U),
+                            .size = (size * sizeof(T)) / sizeof(U)};
+        }
     };
+
+    using Block8 = Block<std::byte>;
 
     struct SegmentAddresses
     {
-        Block code{};
-        Block rodata{};
-        Block data{};
-        Block bss{};
+        Block8 code{};
+        Block8 rodata{};
+        Block8 data{};
+        Block8 bss{};
     };
 
     struct Segments
@@ -69,7 +79,7 @@ namespace elf
 
         // Encompasses everything read-only, i.e., text, rodata and (on a system with flash)
         // initialized data.
-        Block rom{};
+        Block8 rom{};
 
         SegmentAddresses lma{}; // Where the segments are loaded to.
         SegmentAddresses vma{}; // Where they are logically.

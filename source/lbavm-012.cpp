@@ -78,12 +78,12 @@ void DisassembleRv32i(std::span<uint32_t> image)
     }
 }
 
-using Block = elf::Block;
+using Block32 = elf::Block<uint32_t>;
 
 struct Image
 {
     std::vector<uint32_t> image;
-    Block code;
+    Block32 code;
 };
 
 elf::Result<Image> LoadElfImage(const char* filename)
@@ -117,11 +117,9 @@ elf::Result<Image> LoadElfImage(const char* filename)
         return std::unexpected(segments.error());
     }
 
-    Block block = segments->lma.code;
-    block.start = block.start / sizeof(uint32_t);
-    block.size = block.size / sizeof(uint32_t);
+    auto code = Block32(segments->lma.code);
 
-    return Image{.image = image, .code = block};
+    return Image{.image = image, .code = code};
 }
 
 int main(int argc, char* argv[])
