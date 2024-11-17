@@ -2,8 +2,7 @@ param (
     [Parameter(Mandatory = $true)][string]$source
 )
 
-$old = $PWD
-Set-Location $PSScriptRoot
+Push-Location $PSScriptRoot
 
 try {
     New-Item -Path .\out -ItemType Directory -Force | Out-Null
@@ -11,5 +10,5 @@ try {
 
 }
 finally {
-    Set-Location $old
+    Pop-Location
 }
