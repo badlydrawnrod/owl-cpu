@@ -24,10 +24,15 @@ Defines the following symbols:
 
 SECTIONS
 {
+    /* Startup code. */
+    .init : ALIGN(4)
+    {
+        KEEP (*(SORT_NONE(.init)))
+    }
+
     /* Code. */
     .text : ALIGN(4)
     {
-        *(.init)
         *(.text)
     }
 
