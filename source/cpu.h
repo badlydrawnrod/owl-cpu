@@ -120,13 +120,15 @@ public:
             break;
 
         case Syscall::random:
-            // TODO: Do *not* try this at home. What if a0 contains zero?
-            x[a0] = std::rand() % x[a0];
+            if (x[a0] != 0)
+            {
+                x[a0] = std::rand() % x[a0];
+            }
             break;
 
         case Syscall::puts:
-            // TODO: Do *not* try this at home without at least a bounds check.
-            // Who knows what horrors the user-mode code is giving us.
+            // We really shouldn't do this without at least a bounds check. Who knows what horrors
+            // the caller is giving us.
             std::puts(reinterpret_cast<const char*>(memory.data()) + x[a0]);
             break;
         }
